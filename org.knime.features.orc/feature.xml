@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <feature
-      id="org.knime.features.gateway.local"
+      id="org.knime.features.orc"
       label="KNIME Column Storage (based on Apache ORC)"
       version="3.6.0.qualifier"
       provider-name="KNIME AG, Zurich, Switzerland">
