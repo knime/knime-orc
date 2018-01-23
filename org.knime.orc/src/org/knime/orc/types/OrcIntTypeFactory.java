@@ -1,5 +1,6 @@
 /*
  * ------------------------------------------------------------------------
+ *
  *  Copyright by KNIME AG, Zurich, Switzerland
  *  Website: http://www.knime.com; Email: contact@knime.com
  *
@@ -40,51 +41,62 @@
  *  propagated with or for interoperation with KNIME.  The owner of a Node
  *  may freely choose the license terms applicable to such Node, including
  *  when such Node is propagated with or for interoperation with KNIME.
- * -------------------------------------------------------------------
+ * ---------------------------------------------------------------------
  *
  * History
- *   Mar 18, 2016 (wiswedel): created
+ *   Jan 23, 2018 (dietzc): created
  */
-package org.knime.orc.tableformat;
+package org.knime.orc.types;
 
-import java.io.File;
-import java.io.IOException;
-import java.util.Map;
-
-import org.knime.core.data.DataTableSpec;
-import org.knime.core.data.container.ContainerTable;
-import org.knime.core.data.container.storage.AbstractTableStoreReader;
-import org.knime.core.node.InvalidSettingsException;
-import org.knime.core.node.NodeSettingsRO;
-import org.knime.orc.tableformat.OrcKNIMEUtil.OrcWriterBuilder;
+import org.apache.hadoop.hive.ql.exec.vector.LongColumnVector;
+import org.apache.orc.TypeDescription;
+import org.knime.core.data.DataCell;
+import org.knime.core.data.DataType;
+import org.knime.core.data.IntValue;
+import org.knime.core.data.def.IntCell;
+import org.knime.orc.types.OrcIntTypeFactory.OrcIntType;
 
 /**
- *
- * @author wiswedel
+ * @author Bernd Wiswedel, KNIME AG, Zuerich, Germany
+ * @author Christian Dietz, KNIME GmbH, Konstanz, Germany
  */
-final class OrcTableStoreReader extends AbstractTableStoreReader {
-
-    private OrcWriterBuilder m_builder;
+public class OrcIntTypeFactory implements OrcTypeFactory<OrcIntType> {
 
     /**
-     * @param binFile
-     * @param spec
-     * @param settings
-     * @param tblRep
-     * @param version
-     * @param isReadRowKey
-     * @throws InvalidSettingsException
+     * {@inheritDoc}
      */
-    public OrcTableStoreReader(final File binFile, final DataTableSpec spec, final NodeSettingsRO settings, final Map<Integer, ContainerTable> tblRep,
-        final int version, final boolean isReadRowKey) throws InvalidSettingsException {
-        m_builder = new OrcWriterBuilder(binFile, isReadRowKey);
-        m_builder.fromSettings(settings);
-    }
-
-    /** {@inheritDoc} */
     @Override
-    public TableStoreCloseableRowIterator iterator() throws IOException {
-        return m_builder.createRowIterator();
+    public OrcIntType create() {
+        return new OrcIntType();
     }
 
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public DataType type() {
+        return IntCell.TYPE;
+    }
+
+    public static class OrcIntType extends AbstractOrcType<LongColumnVector> {
+        public OrcIntType() {
+            super(TypeDescription.createInt());
+        }
+
+        @Override
+        public void writeValueNonNull(final LongColumnVector columnVector, final int rowInBatch, final DataCell cell) {
+            columnVector.vector[rowInBatch] = ((IntValue)cell).getIntValue();
+        }
+
+        @Override
+        public DataCell readValueNonNull(final LongColumnVector columnVector, final int rowInBatchOrZero) {
+            long valueL = columnVector.vector[rowInBatchOrZero];
+            int valueI = (int)valueL;
+            if (valueI != valueL) {
+                throw new RuntimeException(
+                    String.format("Written as int but read as a long (overflow): (long)%d != (int)%d", valueL, valueI));
+            }
+            return new IntCell(valueI);
+        }
+    }
 }

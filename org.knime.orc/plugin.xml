@@ -4,7 +4,7 @@
    <extension
          point="org.knime.core.TableFormat">
       <TableFormat
-            formatDefinition="org.knime.orc.tableformat.OrcTableStoreFormat">
+            formatDefinition="org.knime.orc.OrcTableStoreFormat">
       </TableFormat>
    </extension>
 

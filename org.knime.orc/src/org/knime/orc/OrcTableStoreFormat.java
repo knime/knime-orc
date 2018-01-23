@@ -45,7 +45,7 @@
  * History
  *   Mar 14, 2016 (wiswedel): created
  */
-package org.knime.orc.tableformat;
+package org.knime.orc;
 
 import java.io.File;
 import java.io.IOException;
@@ -59,27 +59,34 @@ import org.knime.core.data.container.ContainerTable;
 import org.knime.core.data.container.storage.AbstractTableStoreReader;
 import org.knime.core.data.container.storage.AbstractTableStoreWriter;
 import org.knime.core.data.container.storage.TableStoreFormat;
-import org.knime.core.data.def.DoubleCell;
-import org.knime.core.data.def.IntCell;
-import org.knime.core.data.def.LongCell;
-import org.knime.core.data.def.StringCell;
 import org.knime.core.node.InvalidSettingsException;
 import org.knime.core.node.NodeSettingsRO;
+import org.knime.orc.types.OrcDoubleTypeFactory;
+import org.knime.orc.types.OrcIntTypeFactory;
+import org.knime.orc.types.OrcLongTypeFactory;
+import org.knime.orc.types.OrcStringTypeFactory;
+import org.knime.orc.types.OrcType;
+import org.knime.orc.types.OrcTypeFactory;
 
-/**
- *
- * @author wiswedel
- */
 public final class OrcTableStoreFormat implements TableStoreFormat {
 
-    static final Map<DataType, OrcKNIMEType> SUPPORTED_TYPES_MAP;
+    // TODO we could add an extension point for this later.
+    private final static Map<DataType, OrcTypeFactory<?>> TYPE_FACTORIES = new HashMap<>();
+    {
+        register(new OrcStringTypeFactory());
+        register(new OrcDoubleTypeFactory());
+        register(new OrcIntTypeFactory());
+        register(new OrcLongTypeFactory());
+    }
 
-    static {
-        SUPPORTED_TYPES_MAP = new HashMap<>();
-        SUPPORTED_TYPES_MAP.put(StringCell.TYPE, OrcKNIMEType.STRING);
-        SUPPORTED_TYPES_MAP.put(DoubleCell.TYPE, OrcKNIMEType.DOUBLE);
-        SUPPORTED_TYPES_MAP.put(IntCell.TYPE, OrcKNIMEType.INT);
-        SUPPORTED_TYPES_MAP.put(LongCell.TYPE, OrcKNIMEType.LONG);
+    public static synchronized <T extends OrcType<?>> void register(final OrcTypeFactory<T> fac) {
+        TYPE_FACTORIES.putIfAbsent(fac.type(), fac);
+    }
+
+    public final static <T extends OrcType<?>> T createOrcType(final DataType type) {
+        @SuppressWarnings("unchecked")
+        final T orcType = (T)TYPE_FACTORIES.get(type).create();
+        return orcType;
     }
 
     @Override
@@ -95,12 +102,13 @@ public final class OrcTableStoreFormat implements TableStoreFormat {
     /** {@inheritDoc} */
     @Override
     public boolean accepts(final DataTableSpec spec) {
-        return spec.stream().map(c -> c.getType()).allMatch(t -> SUPPORTED_TYPES_MAP.containsKey(t));
+        return spec.stream().map(c -> c.getType()).allMatch(t -> TYPE_FACTORIES.containsKey(t));
     }
 
     /** {@inheritDoc} */
     @Override
-    public AbstractTableStoreWriter createWriter(final File binFile, final DataTableSpec spec, final boolean writeRowKey) throws IOException {
+    public AbstractTableStoreWriter createWriter(final File binFile, final DataTableSpec spec,
+        final boolean writeRowKey) throws IOException {
         return new OrcTableStoreWriter(binFile, spec, writeRowKey);
     }
 
@@ -108,7 +116,8 @@ public final class OrcTableStoreFormat implements TableStoreFormat {
      * {@inheritDoc}
      */
     @Override
-    public AbstractTableStoreWriter createWriter(final OutputStream output, final DataTableSpec spec, final boolean writeRowKey) throws IOException, UnsupportedOperationException {
+    public AbstractTableStoreWriter createWriter(final OutputStream output, final DataTableSpec spec,
+        final boolean writeRowKey) throws IOException, UnsupportedOperationException {
         throw new UnsupportedOperationException("Writing to stream not supported");
     }
 
@@ -116,9 +125,12 @@ public final class OrcTableStoreFormat implements TableStoreFormat {
      * {@inheritDoc}
      */
     @Override
-    public AbstractTableStoreReader createReader(final File binFile, final DataTableSpec spec, final NodeSettingsRO settings,
-        final Map<Integer, ContainerTable> tblRep, final int version, final boolean isReadRowKey) throws IOException, InvalidSettingsException {
-        return new OrcTableStoreReader(binFile, spec, settings, tblRep, version, isReadRowKey);
+    public AbstractTableStoreReader createReader(final File binFile, final DataTableSpec spec,
+        final NodeSettingsRO settings, final Map<Integer, ContainerTable> tblRep, final int version,
+        final boolean isReadRowKey) throws IOException, InvalidSettingsException {
+        final OrcTableStoreReader reader = new OrcTableStoreReader(binFile, isReadRowKey);
+        reader.loadMetaInfoBeforeRead(settings);
+        return reader;
     }
 
 }

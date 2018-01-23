@@ -1,5 +1,6 @@
 /*
  * ------------------------------------------------------------------------
+ *
  *  Copyright by KNIME AG, Zurich, Switzerland
  *  Website: http://www.knime.com; Email: contact@knime.com
  *
@@ -40,75 +41,41 @@
  *  propagated with or for interoperation with KNIME.  The owner of a Node
  *  may freely choose the license terms applicable to such Node, including
  *  when such Node is propagated with or for interoperation with KNIME.
- * -------------------------------------------------------------------
+ * ---------------------------------------------------------------------
  *
  * History
- *   Mar 18, 2016 (wiswedel): created
+ *   Jan 23, 2018 (dietzc): created
  */
-package org.knime.orc.tableformat;
+package org.knime.orc.types;
 
-import java.io.File;
-import java.io.IOException;
-
-import org.knime.core.data.DataColumnSpec;
-import org.knime.core.data.DataRow;
-import org.knime.core.data.DataTableSpec;
-import org.knime.core.data.container.storage.AbstractTableStoreWriter;
-import org.knime.core.node.NodeSettings;
-import org.knime.core.node.NodeSettingsWO;
-import org.knime.orc.tableformat.OrcKNIMEUtil.OrcKNIMEWriter;
-import org.knime.orc.tableformat.OrcKNIMEUtil.OrcWriterBuilder;
+import org.apache.hadoop.hive.ql.exec.vector.ColumnVector;
+import org.apache.orc.TypeDescription;
+import org.knime.core.data.DataCell;
 
 /**
+ * TODO
  *
- * @author wiswedel
+ * @author Christian Dietz, KNIME GmbH, Konstanz, Germany
+ * @param <C>
  */
-final class OrcTableStoreWriter extends AbstractTableStoreWriter {
-
-    private final File m_binFile;
-    private final OrcKNIMEWriter m_orcKNIMEWriter;
-    private final NodeSettings m_orcSettings;
-
+public interface OrcType<C extends ColumnVector> {
 
     /**
-     * @param binFile
-     * @param spec
-     * @param writeRowKey
-     * @throws IOException
-     * @throws IllegalArgumentException
+     * @param columnVector
+     * @param rowInBatch
+     * @param cell
      */
-    public OrcTableStoreWriter(final File binFile, final DataTableSpec spec, final boolean writeRowKey) throws IllegalArgumentException, IOException {
-        super(spec, writeRowKey);
-        m_binFile = binFile;
-        m_binFile.delete();
-        OrcWriterBuilder builder = new OrcWriterBuilder(binFile, writeRowKey);
-        for (int i = 0; i < spec.getNumColumns(); i++) {
-            DataColumnSpec colSpec = spec.getColumnSpec(i);
-            String name = i + "-" + colSpec.getName().replaceAll("[^a-zA-Z]", "-");
-            builder.addField(name, OrcTableStoreFormat.SUPPORTED_TYPES_MAP.get(colSpec.getType()));
-        }
-        m_orcKNIMEWriter = builder.create();
-        NodeSettings s = new NodeSettings("orc-settings");
-        builder.writeSettings(s);
-        m_orcSettings = s;
-    }
+    void writeValue(C columnVector, int rowInBatch, DataCell cell);
 
-    /** {@inheritDoc} */
-    @Override
-    public void writeRow(final DataRow row) throws IOException {
-        m_orcKNIMEWriter.addRow(row);
-    }
+    /**
+     * @param columnVector
+     * @param rowInBatch
+     * @return
+     */
+    DataCell readValue(C columnVector, int rowInBatch);
 
-    /** {@inheritDoc} */
-    @Override
-    public void writeMetaInfoAfterWrite(final NodeSettingsWO settings) {
-        m_orcSettings.copyTo(settings);
-    }
-
-    /** {@inheritDoc} */
-    @Override
-    public void close() throws IOException {
-        m_orcKNIMEWriter.close();
-    }
-
+    /**
+     * @return
+     */
+    TypeDescription getTypeDescription();
 }
