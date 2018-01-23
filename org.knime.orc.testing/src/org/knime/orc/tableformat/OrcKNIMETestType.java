@@ -53,6 +53,7 @@ import org.knime.core.data.def.DoubleCell;
 import org.knime.core.data.def.IntCell;
 import org.knime.core.data.def.LongCell;
 import org.knime.core.data.def.StringCell;
+import org.knime.orc.OrcKNIMEType;
 
 /**
  * Wrapper around {@link OrcKNIMEType} that has additional factory methods to create elements (e.g. DataCells) that

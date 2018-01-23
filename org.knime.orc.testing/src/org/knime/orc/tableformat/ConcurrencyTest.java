@@ -72,9 +72,10 @@ import org.knime.core.data.def.DefaultRow;
 import org.knime.core.data.def.IntCell;
 import org.knime.core.data.def.StringCell;
 import org.knime.core.node.NodeSettings;
-import org.knime.orc.tableformat.OrcKNIMEUtil.OrcKNIMEWriter;
+import org.knime.orc.OrcKNIMEType;
 import org.knime.orc.tableformat.OrcKNIMEUtil.OrcRowIterator;
-import org.knime.orc.tableformat.OrcKNIMEUtil.OrcWriterBuilder;
+import org.knime.orc.writer.OrcKNIMEWriter;
+import org.knime.orc.writer.OrcWriterBuilder;
 
 /**
  *

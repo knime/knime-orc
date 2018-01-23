@@ -4,10 +4,11 @@ Bundle-Name: KNIME Columnar Data Storage using Apache ORC
 Bundle-SymbolicName: org.knime.orc;singleton:=true
 Bundle-Version: 3.6.0.qualifier
 Bundle-RequiredExecutionEnvironment: JavaSE-1.8
-Bundle-Vendor: KNIME AG, Zurich, Switzerland
+Bundle-Vendor: KNIME AG
 Bundle-ActivationPolicy: lazy
 Bundle-ClassPath: knime-orc.jar
-Export-Package: org.knime.orc.tableformat
+Export-Package: org.knime.orc,
+ org.knime.orc.types
 Require-Bundle: org.knime.core;bundle-version="[3.6.0,4.0.0)",
  com.google.protobuf;bundle-version="[2.5.0,3.0.0)",
  org.apache.commons.lang;bundle-version="[2.6.0,3.0.0)",

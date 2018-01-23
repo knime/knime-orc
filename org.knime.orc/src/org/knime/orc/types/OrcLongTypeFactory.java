@@ -1,5 +1,6 @@
 /*
  * ------------------------------------------------------------------------
+ *
  *  Copyright by KNIME AG, Zurich, Switzerland
  *  Website: http://www.knime.com; Email: contact@knime.com
  *
@@ -40,18 +41,56 @@
  *  propagated with or for interoperation with KNIME.  The owner of a Node
  *  may freely choose the license terms applicable to such Node, including
  *  when such Node is propagated with or for interoperation with KNIME.
- * -------------------------------------------------------------------
+ * ---------------------------------------------------------------------
  *
  * History
- *   Sep 22, 2017 (wiswedel): created
+ *   Jan 23, 2018 (dietzc): created
  */
-package org.knime.orc.tableformat;
+package org.knime.orc.types;
+
+import org.apache.hadoop.hive.ql.exec.vector.LongColumnVector;
+import org.apache.orc.TypeDescription;
+import org.knime.core.data.DataCell;
+import org.knime.core.data.DataType;
+import org.knime.core.data.LongValue;
+import org.knime.core.data.def.LongCell;
+import org.knime.orc.types.OrcLongTypeFactory.OrcLongType;
 
 /**
- *
- * @author wiswedel
+ * @author Bernd Wiswedel, KNIME AG, Zuerich, Germany
+ * @author Christian Dietz, KNIME GmbH, Konstanz, Germany
  */
-final class OrcKNIMESchema {
+public class OrcLongTypeFactory implements OrcTypeFactory<OrcLongType> {
 
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public OrcLongType create() {
+        return new OrcLongType();
+    }
 
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public DataType type() {
+        return LongCell.TYPE;
+    }
+
+    public static class OrcLongType extends AbstractOrcType<LongColumnVector> {
+        public OrcLongType() {
+            super(TypeDescription.createLong());
+        }
+
+        @Override
+        public void writeValueNonNull(final LongColumnVector columnVector, final int rowInBatch, final DataCell cell) {
+            columnVector.vector[rowInBatch] = ((LongValue)cell).getLongValue();
+        }
+
+        @Override
+        public DataCell readValueNonNull(final LongColumnVector columnVector, final int rowInBatchOrZero) {
+            return new LongCell(columnVector.vector[rowInBatchOrZero]);
+        }
+    }
 }
