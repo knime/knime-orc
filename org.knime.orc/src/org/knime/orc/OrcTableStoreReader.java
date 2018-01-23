@@ -99,7 +99,7 @@ public final class OrcTableStoreReader extends AbstractTableStoreReader {
 
     /** {@inheritDoc} */
     @Override
-    public TableStoreCloseableRowIterator iterator() throws IOException {
+    public OrcRowIterator iterator() throws IOException {
         final Reader reader =
             OrcFile.createReader(new Path(m_file.getAbsolutePath()), OrcFile.readerOptions(new Configuration()));
 

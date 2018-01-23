@@ -45,7 +45,7 @@
  * History
  *   Jan 5, 2018 (wiswedel): created
  */
-package org.knime.orc.tableformat;
+package org.knime.orc;
 
 import org.knime.core.data.DataCell;
 import org.knime.core.data.DataType;
@@ -53,32 +53,39 @@ import org.knime.core.data.def.DoubleCell;
 import org.knime.core.data.def.IntCell;
 import org.knime.core.data.def.LongCell;
 import org.knime.core.data.def.StringCell;
-import org.knime.orc.OrcKNIMEType;
+import org.knime.orc.types.OrcDoubleTypeFactory;
+import org.knime.orc.types.OrcIntTypeFactory;
+import org.knime.orc.types.OrcLongTypeFactory;
+import org.knime.orc.types.OrcStringTypeFactory;
+import org.knime.orc.types.OrcType;
 
 /**
- * Wrapper around {@link OrcKNIMEType} that has additional factory methods to create elements (e.g. DataCells) that
- * are used during unit testing.
+ * Wrapper around {@link OrcKNIMEType} that has additional factory methods to create elements (e.g. DataCells) that are
+ * used during unit testing.
  *
  * @author Bernd Wiswedel, KNIME AG, Zurich, Switzerland
  */
 public abstract class OrcKNIMETestType {
 
     public static final OrcKNIMETestType TEST_DOUBLE = new DoubleOrcKNIMETestType();
+
     public static final OrcKNIMETestType TEST_STRING = new StringOrcKNIMETestType();
+
     public static final OrcKNIMETestType TEST_INT = new IntOrcKNIMETestType();
+
     public static final OrcKNIMETestType TEST_LONG = new LongOrcKNIMETestType();
 
-    private final OrcKNIMEType<?> m_type;
+    private final OrcType<?> m_type;
 
     /**
      * @param type
      */
-    OrcKNIMETestType(final OrcKNIMEType<?> type) {
+    OrcKNIMETestType(final OrcType<?> type) {
         m_type = type;
     }
 
     /** @return the type */
-    final OrcKNIMEType<?> getType() {
+    final OrcType<?> getType() {
         return m_type;
     }
 
@@ -91,12 +98,14 @@ public abstract class OrcKNIMETestType {
     /** Types representing Double. */
     private static final class DoubleOrcKNIMETestType extends OrcKNIMETestType {
         DoubleOrcKNIMETestType() {
-            super(OrcKNIMEType.DOUBLE);
+            super(new OrcDoubleTypeFactory().create());
         }
+
         @Override
         DataCell createTestCell(final long rowIndex) {
             return new DoubleCell(rowIndex * 0.5);
         }
+
         @Override
         DataType getKNIMEColumnType() {
             return DoubleCell.TYPE;
@@ -106,12 +115,14 @@ public abstract class OrcKNIMETestType {
     /** Types representing String. */
     private static final class StringOrcKNIMETestType extends OrcKNIMETestType {
         StringOrcKNIMETestType() {
-            super(OrcKNIMEType.STRING);
+            super(new OrcStringTypeFactory().create());
         }
+
         @Override
         DataCell createTestCell(final long rowIndex) {
             return new StringCell("Cell " + rowIndex);
         }
+
         @Override
         DataType getKNIMEColumnType() {
             return StringCell.TYPE;
@@ -121,12 +132,14 @@ public abstract class OrcKNIMETestType {
     /** Types representing Int. */
     private static final class IntOrcKNIMETestType extends OrcKNIMETestType {
         IntOrcKNIMETestType() {
-            super(OrcKNIMEType.INT);
+            super(new OrcIntTypeFactory().create());
         }
+
         @Override
         DataCell createTestCell(final long rowIndex) {
             return new IntCell((int)rowIndex);
         }
+
         @Override
         DataType getKNIMEColumnType() {
             return IntCell.TYPE;
@@ -136,12 +149,14 @@ public abstract class OrcKNIMETestType {
     /** Types representing Long. */
     private static final class LongOrcKNIMETestType extends OrcKNIMETestType {
         LongOrcKNIMETestType() {
-            super(OrcKNIMEType.LONG);
+            super(new OrcLongTypeFactory().create());
         }
+
         @Override
         DataCell createTestCell(final long rowIndex) {
             return new LongCell(rowIndex);
         }
+
         @Override
         DataType getKNIMEColumnType() {
             return LongCell.TYPE;

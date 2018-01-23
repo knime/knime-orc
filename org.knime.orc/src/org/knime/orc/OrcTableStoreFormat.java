@@ -72,7 +72,8 @@ public final class OrcTableStoreFormat implements TableStoreFormat {
 
     // TODO we could add an extension point for this later.
     private final static Map<DataType, OrcTypeFactory<?>> TYPE_FACTORIES = new HashMap<>();
-    {
+
+    static {
         register(new OrcStringTypeFactory());
         register(new OrcDoubleTypeFactory());
         register(new OrcIntTypeFactory());

@@ -45,7 +45,7 @@
  * History
  *   Jan 5, 2018 (wiswedel): created
  */
-package org.knime.orc.tableformat;
+package org.knime.orc;
 
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.CoreMatchers.not;
@@ -53,6 +53,7 @@ import static org.hamcrest.core.IsEqual.equalTo;
 import static org.hamcrest.core.IsSame.sameInstance;
 
 import java.io.File;
+import java.io.IOException;
 import java.util.function.Function;
 
 import org.apache.commons.io.FileUtils;
@@ -66,15 +67,14 @@ import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameter;
 import org.junit.runners.Parameterized.Parameters;
 import org.knime.core.data.DataCell;
+import org.knime.core.data.DataColumnSpecCreator;
 import org.knime.core.data.DataRow;
+import org.knime.core.data.DataTableSpec;
 import org.knime.core.data.DataType;
 import org.knime.core.data.RowKey;
 import org.knime.core.data.def.DefaultRow;
 import org.knime.core.node.NodeSettings;
-import org.knime.orc.OrcKNIMEType;
-import org.knime.orc.tableformat.OrcKNIMEUtil.OrcKNIMEWriter;
-import org.knime.orc.tableformat.OrcKNIMEUtil.OrcRowIterator;
-import org.knime.orc.tableformat.OrcKNIMEUtil.OrcWriterBuilder;
+import org.knime.orc.OrcTableStoreReader.OrcRowIterator;
 
 /**
  *
@@ -91,12 +91,8 @@ public final class OrcTypeTest {
     /** Test is parameterized for different types, see {@link OrcKNIMEType}. */
     @Parameters(name = "{index}: ORCKNIMEType: {0}")
     public static OrcKNIMETestType[] getTestTypes() {
-        return new OrcKNIMETestType[] {
-            OrcKNIMETestType.TEST_DOUBLE,
-            OrcKNIMETestType.TEST_INT,
-            OrcKNIMETestType.TEST_LONG,
-            OrcKNIMETestType.TEST_STRING,
-        };
+        return new OrcKNIMETestType[]{OrcKNIMETestType.TEST_DOUBLE, OrcKNIMETestType.TEST_INT,
+            OrcKNIMETestType.TEST_LONG, OrcKNIMETestType.TEST_STRING,};
     }
 
     @Parameter
@@ -105,23 +101,24 @@ public final class OrcTypeTest {
     @Test
     public void writeSimpleCellNoHeader() throws Exception {
         File tempFile = new File(m_tempFolder.getRoot(), "file.orc"); // must not exist
-        OrcWriterBuilder writeBuilder = new OrcWriterBuilder(tempFile, false);
-        writeBuilder.addField(m_orcKNIMETestType.getClass().getSimpleName(), m_orcKNIMETestType.getType());
-        OrcKNIMEWriter orcWriter = writeBuilder.create();
+        DataTableSpec spec =
+            new DataTableSpec(new DataColumnSpecCreator("test", m_orcKNIMETestType.getKNIMEColumnType()).createSpec());
+
+        OrcTableStoreWriter writer = new OrcTableStoreWriter(tempFile, spec, false);
         DataCell singleCell = m_orcKNIMETestType.createTestCell(0);
         DataRow row = new DefaultRow(CONSTANT_KEY, singleCell);
-        orcWriter.addRow(row);
-        orcWriter.close();
+        writer.writeRow(row);
+        writer.close();
         Assert.assertTrue("File not created " + tempFile.getAbsolutePath(), tempFile.isFile());
-        Assert.assertThat("File length unexpected " + tempFile.getAbsolutePath(),
-            FileUtils.sizeOf(tempFile), OrderingComparison.greaterThan(0L));
+        Assert.assertThat("File length unexpected " + tempFile.getAbsolutePath(), FileUtils.sizeOf(tempFile),
+            OrderingComparison.greaterThan(0L));
         NodeSettings settings = new NodeSettings("temp");
-        writeBuilder.writeSettings(settings);
+        writer.writeMetaInfoAfterWrite(settings);
 
-        OrcWriterBuilder readBuilder = new OrcWriterBuilder(tempFile, false);
-        readBuilder.fromSettings(settings);
+        OrcTableStoreReader reader = new OrcTableStoreReader(tempFile, false);
+        reader.loadMetaInfoBeforeRead(settings);
 
-        OrcRowIterator rowIterator = readBuilder.createRowIterator();
+        OrcRowIterator rowIterator = reader.iterator();
         Assert.assertThat("Iterator has rows", rowIterator.hasNext(), is(true));
         DataRow dataRow = rowIterator.next();
         Assert.assertThat("Row length", dataRow.getNumCells(), is(1));
@@ -132,55 +129,61 @@ public final class OrcTypeTest {
 
     @Test
     public void writeManyNoMissingsWithHeader() throws Exception {
-        writeTestImplementation(rowIndex -> m_orcKNIMETestType.createTestCell(rowIndex), true);
+        File tempFile = new File(m_tempFolder.getRoot(), "file.orc");
+        writeTestImplementation(tempFile, rowIndex -> m_orcKNIMETestType.createTestCell(rowIndex), true);
     }
 
     @Test
     public void writeManyWithMissingsNoHeader() throws Exception {
+        File tempFile = new File(m_tempFolder.getRoot(), "file.orc");
         Function<Long, DataCell> valueFunction = rowIndex -> {
             if ((rowIndex + 1) % 200 == 0) {
                 return DataType.getMissingCell();
             }
             return m_orcKNIMETestType.createTestCell(rowIndex);
         };
-        writeTestImplementation(valueFunction, false);
+        writeTestImplementation(tempFile, valueFunction, false);
     }
 
     @Test
     public void writeAllConstantNoHeader() throws Exception {
         final DataCell constantCell = m_orcKNIMETestType.createTestCell(17);
-        OrcWriterBuilder builder = writeTestImplementation(rowIndex -> constantCell, false);
-        File tempFile = builder.getFile();
+        File tempFile = new File(m_tempFolder.getRoot(), "file.orc");
+        writeTestImplementation(tempFile, rowIndex -> constantCell, false);
         // file size must be really small despite number of rows
-        Assert.assertThat("File length unexpected " + tempFile.getAbsolutePath(),
-            FileUtils.sizeOf(tempFile), OrderingComparison.lessThan(20 * 1024L));
+        Assert.assertThat("File length unexpected " + tempFile.getAbsolutePath(), FileUtils.sizeOf(tempFile),
+            OrderingComparison.lessThan(20 * 1024L));
     }
 
     @Test
     public void writeAllMissingsNoHeader() throws Exception {
-        OrcWriterBuilder builder = writeTestImplementation(rowIndex -> DataType.getMissingCell(), false);
-        File tempFile = builder.getFile();
+        File tempFile = new File(m_tempFolder.getRoot(), "file.orc");
+        writeTestImplementation(tempFile, rowIndex -> DataType.getMissingCell(), false);
         // file size must be really small despite number of rows
-        Assert.assertThat("File length unexpected " + tempFile.getAbsolutePath(),
-            FileUtils.sizeOf(tempFile), OrderingComparison.lessThan(20 * 1024L));
+        Assert.assertThat("File length unexpected " + tempFile.getAbsolutePath(), FileUtils.sizeOf(tempFile),
+            OrderingComparison.lessThan(20 * 1024L));
     }
 
-    public OrcWriterBuilder writeTestImplementation(final Function<Long, DataCell> valueFunction,
+    public void writeTestImplementation(final File tempFile, final Function<Long, DataCell> valueFunction,
         final boolean testHeader) throws Exception {
-        OrcWriterBuilder builder = prepOrcWriterBuilder(testHeader);
-        File tempFile = builder.getFile();
-        OrcKNIMEWriter orcWriter = builder.create();
+        OrcTableStoreWriter orcWriter = prepOrcWriter(tempFile, testHeader);
         final int rowCount = 5000;
         for (long i = 0; i < rowCount; i++) {
             DataCell singleCell = valueFunction.apply(i);
             DataRow row = new DefaultRow(RowKey.createRowKey(i), singleCell);
-            orcWriter.addRow(row);
+            orcWriter.writeRow(row);
         }
         orcWriter.close();
+        NodeSettings settings = new NodeSettings("temp");
+        orcWriter.writeMetaInfoAfterWrite(settings);
         Assert.assertTrue("File not created " + tempFile.getAbsolutePath(), tempFile.isFile());
-        Assert.assertThat("File length unexpected " + tempFile.getAbsolutePath(),
-            FileUtils.sizeOf(tempFile), OrderingComparison.greaterThan(0L));
-        OrcRowIterator rowIterator = builder.createRowIterator();
+        Assert.assertThat("File length unexpected " + tempFile.getAbsolutePath(), FileUtils.sizeOf(tempFile),
+            OrderingComparison.greaterThan(0L));
+
+        OrcTableStoreReader reader = new OrcTableStoreReader(tempFile, testHeader);
+        reader.loadMetaInfoBeforeRead(settings);
+
+        OrcRowIterator rowIterator = reader.iterator();
         for (long i = 0; i < rowCount; i++) {
             Assert.assertThat("Iterator has row with index " + i, rowIterator.hasNext(), is(true));
             DataRow dataRow = rowIterator.next();
@@ -196,17 +199,23 @@ public final class OrcTypeTest {
             }
         }
         Assert.assertThat("Iterator has row with index " + rowCount, rowIterator.hasNext(), is(false));
-        return builder;
     }
 
-    /** Create a builder, make some configurations to the builder so that it handles our small test data
-     * like if it was 'big'. */
-    private OrcWriterBuilder prepOrcWriterBuilder(final boolean hasKey) {
-        File tempFile = new File(m_tempFolder.getRoot(), "file.orc"); // must not exist
-        OrcWriterBuilder builder = new OrcWriterBuilder(tempFile, hasKey);
-        builder.addField(m_orcKNIMETestType.getClass().getSimpleName(), m_orcKNIMETestType.getType());
-        builder.setRowBatchSize(256); // just to force some further processing
-        builder.setStripeSize(64 * 1024L); // default is (was?) 64MB -- now it's 64kB to force multiple stripes
+    /**
+     * Create a builder, make some configurations to the builder so that it handles our small test data like if it was
+     * 'big'.
+     *
+     * @throws IOException
+     * @throws IllegalArgumentException
+     */
+    private OrcTableStoreWriter prepOrcWriter(final File file, final boolean hasKey)
+        throws IllegalArgumentException, IOException {
+        // must not exist
+        DataTableSpec spec = new DataTableSpec(new DataColumnSpecCreator(m_orcKNIMETestType.getClass().getSimpleName(),
+            m_orcKNIMETestType.getKNIMEColumnType()).createSpec());
+        // batchSize  to force some further processing
+        // stripeSize default is (was?) 64MB -- now it's 64kB to force multiple stripes
+        OrcTableStoreWriter builder = new OrcTableStoreWriter(file, spec, hasKey, 256, 64 * 1024L);
         return builder;
     }
 

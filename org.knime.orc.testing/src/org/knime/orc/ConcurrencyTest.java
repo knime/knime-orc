@@ -45,7 +45,7 @@
  * History
  *   Jan 5, 2018 (wiswedel): created
  */
-package org.knime.orc.tableformat;
+package org.knime.orc;
 
 import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.CoreMatchers.is;
@@ -65,17 +65,16 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 import org.knime.core.data.DataCell;
+import org.knime.core.data.DataColumnSpecCreator;
 import org.knime.core.data.DataRow;
+import org.knime.core.data.DataTableSpec;
 import org.knime.core.data.DataType;
 import org.knime.core.data.RowKey;
 import org.knime.core.data.def.DefaultRow;
 import org.knime.core.data.def.IntCell;
 import org.knime.core.data.def.StringCell;
 import org.knime.core.node.NodeSettings;
-import org.knime.orc.OrcKNIMEType;
-import org.knime.orc.tableformat.OrcKNIMEUtil.OrcRowIterator;
-import org.knime.orc.writer.OrcKNIMEWriter;
-import org.knime.orc.writer.OrcWriterBuilder;
+import org.knime.orc.OrcTableStoreReader.OrcRowIterator;
 
 /**
  *
@@ -86,17 +85,21 @@ public final class ConcurrencyTest {
     @Rule
     public TemporaryFolder m_tempFolder = new TemporaryFolder();
 
-    /** Writes and reads many ORC files concurrently, data contains primitives with some being missing.
-     * (Test developed while hunting a problem when running the workflow tests;
-     * I thought it's worthwhile to keep the test)
+    /**
+     * Writes and reads many ORC files concurrently, data contains primitives with some being missing. (Test developed
+     * while hunting a problem when running the workflow tests; I thought it's worthwhile to keep the test)
      */
     @Test
     public void readWriteConcurrent() throws Exception {
 
-        final DataRow[] rowsToWrite = IntStream.range(0, 2)
+        final DataRow[] rowsToWrite =
+            IntStream.range(0, 2)
                 .mapToObj(i -> new DefaultRow(RowKey.createRowKey((long)i), new IntCell(i),
                     i % 2 == 1 ? DataType.getMissingCell() : new StringCell(Integer.toString(i))))
                 .toArray(DataRow[]::new);
+
+        final DataTableSpec spec = new DataTableSpec(new DataColumnSpecCreator("intsAsInt", IntCell.TYPE).createSpec(),
+            new DataColumnSpecCreator("intsAsString", StringCell.TYPE).createSpec());
 
         final int threadCount = 20;
         final ExecutorService threadPool = Executors.newFixedThreadPool(threadCount);
@@ -106,16 +109,13 @@ public final class ConcurrencyTest {
                 final int iFinal = i;
                 runWriterCompletionService.submit(() -> {
                     File tempFile = new File(m_tempFolder.getRoot(), "file-" + iFinal + ".orc");
-                    OrcWriterBuilder writeBuilder = new OrcWriterBuilder(tempFile, true);
-                    writeBuilder.addField("intsAsInt", OrcKNIMEType.INT);
-                    writeBuilder.addField("intsAsString", OrcKNIMEType.STRING);
-                    OrcKNIMEWriter orcWriter = writeBuilder.create();
+                    OrcTableStoreWriter writer = new OrcTableStoreWriter(tempFile, spec, true);
                     for (int j = 0; j < rowsToWrite.length; j++) {
-                        orcWriter.addRow(rowsToWrite[j]);
+                        writer.writeRow(rowsToWrite[j]);
                     }
-                    orcWriter.close();
+                    writer.close();
                     NodeSettings settings = new NodeSettings("temp");
-                    writeBuilder.writeSettings(settings);
+                    writer.writeMetaInfoAfterWrite(settings);
                     return new FileAndSettings(tempFile, settings);
                 });
             }
@@ -125,10 +125,10 @@ public final class ConcurrencyTest {
                 Future<FileAndSettings> completeWriterFuture = runWriterCompletionService.take();
                 FileAndSettings fileAndWriterSettings = completeWriterFuture.get();
                 runReaderCompletionService.submit(() -> {
-                    OrcWriterBuilder readBuilder = new OrcWriterBuilder(fileAndWriterSettings.m_file, true);
-                    readBuilder.fromSettings(fileAndWriterSettings.m_settings);
+                    OrcTableStoreReader readBuilder = new OrcTableStoreReader(fileAndWriterSettings.m_file, true);
+                    readBuilder.loadMetaInfoBeforeRead(fileAndWriterSettings.m_settings);
 
-                    OrcRowIterator rowIterator = readBuilder.createRowIterator();
+                    OrcRowIterator rowIterator = readBuilder.iterator();
                     for (int j = 0; j < rowsToWrite.length; j++) {
                         Assert.assertThat("Iterator has rows", rowIterator.hasNext(), is(true));
                         DataRow refRow = rowsToWrite[j];
@@ -140,15 +140,16 @@ public final class ConcurrencyTest {
                                 Assert.assertThat("Cell " + cellIndex + " in Row " + j + " is missing",
                                     dataCell.isMissing(), is(true));
                             } else {
-                                Assert.assertThat("Cell " + cellIndex + " in Row " + j,
-                                    dataRow.getCell(cellIndex), not(sameInstance(refRow.getCell(cellIndex))));
-                                Assert.assertThat("Cell " + cellIndex + " in Row " + j,
-                                    dataRow.getCell(cellIndex), equalTo(refRow.getCell(cellIndex)));
+                                Assert.assertThat("Cell " + cellIndex + " in Row " + j, dataRow.getCell(cellIndex),
+                                    not(sameInstance(refRow.getCell(cellIndex))));
+                                Assert.assertThat("Cell " + cellIndex + " in Row " + j, dataRow.getCell(cellIndex),
+                                    equalTo(refRow.getCell(cellIndex)));
                             }
                         }
                         Assert.assertThat("Row key in row " + j, dataRow.getKey(), equalTo(refRow.getKey()));
                     }
-                    Assert.assertThat("Iterator with more " + rowsToWrite.length + " rows", rowIterator.hasNext(), is(false));
+                    Assert.assertThat("Iterator with more " + rowsToWrite.length + " rows", rowIterator.hasNext(),
+                        is(false));
                     return null;
                 });
             }
@@ -163,7 +164,9 @@ public final class ConcurrencyTest {
 
     static final class FileAndSettings {
         private final File m_file;
+
         private final NodeSettings m_settings;
+
         FileAndSettings(final File file, final NodeSettings settings) {
             m_file = file;
             m_settings = settings;

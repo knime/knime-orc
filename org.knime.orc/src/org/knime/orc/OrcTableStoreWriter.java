@@ -99,16 +99,26 @@ public class OrcTableStoreWriter extends AbstractTableStoreWriter {
      * @throws IOException
      * @throws IllegalArgumentException
      */
-    public OrcTableStoreWriter(final File file, final DataTableSpec spec, final boolean isWriteRowKey)
-        throws IllegalArgumentException, IOException {
+    public OrcTableStoreWriter(final File file, final DataTableSpec spec, final boolean isWriteRowKey,
+        final int batchSize, final long stripeSize) throws IllegalArgumentException, IOException {
         super(spec, isWriteRowKey);
-        m_stripSize = -1l;
         m_binFile = file;
         m_binFile.delete();
-
-        // TODO offer alternative constructor to be able to configure batchSize
-        m_batchSize = VectorizedRowBatch.DEFAULT_SIZE;
+        m_batchSize = batchSize;
+        m_stripSize = stripeSize;
         m_orcKNIMEWriter = initWriter();
+    }
+
+    /**
+     * @param file
+     * @param spec
+     * @param isWriteRowKey
+     * @throws IOException
+     * @throws IllegalArgumentException
+     */
+    public OrcTableStoreWriter(final File file, final DataTableSpec spec, final boolean isWriteRowKey)
+        throws IllegalArgumentException, IOException {
+        this(file, spec, isWriteRowKey, VectorizedRowBatch.DEFAULT_SIZE, -1l);
     }
 
     /**
