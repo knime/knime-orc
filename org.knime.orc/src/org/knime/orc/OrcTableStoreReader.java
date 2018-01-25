@@ -56,17 +56,18 @@ import java.util.List;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hive.ql.exec.vector.BytesColumnVector;
-import org.apache.hadoop.hive.ql.exec.vector.ColumnVector;
 import org.apache.hadoop.hive.ql.exec.vector.VectorizedRowBatch;
 import org.apache.orc.OrcFile;
+import org.apache.orc.OrcFile.ReaderOptions;
 import org.apache.orc.Reader;
+import org.apache.orc.Reader.Options;
 import org.apache.orc.RecordReader;
 import org.knime.core.data.DataCell;
 import org.knime.core.data.DataRow;
 import org.knime.core.data.RowKey;
-import org.knime.core.data.container.BlobSupportDataRow;
 import org.knime.core.data.container.storage.AbstractTableStoreReader;
 import org.knime.core.data.def.DefaultCellIterator;
+import org.knime.core.data.def.DefaultRow;
 import org.knime.core.node.InvalidSettingsException;
 import org.knime.core.node.NodeSettingsRO;
 import org.knime.orc.types.AbstractOrcType;
@@ -93,22 +94,22 @@ public final class OrcTableStoreReader extends AbstractTableStoreReader {
     public OrcTableStoreReader(final File file, final boolean isReadRowKey) throws InvalidSettingsException {
         m_file = file;
         m_isReadRowKey = isReadRowKey;
-        // TODO make this configurable from outside?
         m_batchSize = VectorizedRowBatch.DEFAULT_SIZE;
     }
 
     /** {@inheritDoc} */
     @Override
-    public OrcRowIterator iterator() throws IOException {
-        final Reader reader =
-            OrcFile.createReader(new Path(m_file.getAbsolutePath()), OrcFile.readerOptions(new Configuration()));
+    public OrcRowIterator iterator(final int... colIndices) throws IOException {
+        ReaderOptions options = OrcFile.readerOptions(new Configuration());
+        final Reader reader = OrcFile.createReader(new Path(m_file.getAbsolutePath()), options);
 
         if (m_columnReaders == null) {
             // TODO beautify exception message and add logging
             throw new IOException(
                 "No information for type deserialization loaded. Most likely an implementation error.");
         }
-        return new OrcRowIterator(reader, m_isReadRowKey, m_batchSize, m_columnReaders);
+
+        return new OrcRowIterator(reader, m_isReadRowKey, m_batchSize, m_columnReaders, colIndices);
     }
 
     // TODO could we make this part of the interface?
@@ -146,19 +147,32 @@ public final class OrcTableStoreReader extends AbstractTableStoreReader {
 
         private boolean m_isClosed;
 
-        private OrcType<?>[] m_readers;
+        private OrcType[] m_readers;
 
         /**
          * @param reader
          * @param readerOptions TODO
          * @param columnTypes TODO
          * @param batchSize TODO
+         * @param colIndices
          * @throws IOException
          */
-        OrcRowIterator(final Reader reader, final boolean hasRowKey, final int batchSize,
-            final OrcType<?>[] columnReaders) throws IOException {
+        OrcRowIterator(final Reader reader, final boolean hasRowKey, final int batchSize, final OrcType[] columnReaders,
+            final int[] colIndices) throws IOException {
             m_hasRowKey = hasRowKey;
-            m_rows = reader.rows();
+
+            final Options options = new Options();
+            if (colIndices.length > 0) {
+                // TODO I guess this might be a bug in ORC that I've to do + offset?!
+                final int offset = (reader.getSchema().getMaximumId() + 1) - columnReaders.length;
+                final boolean[] cols = new boolean[columnReaders.length + offset];
+                cols[offset] = hasRowKey;
+                for (int i = 0; i < colIndices.length; i++) {
+                    cols[colIndices[i] + offset + 1] = true;
+                }
+                options.include(cols);
+            }
+            m_rows = reader.rows(options);
             m_rowBatch = reader.getSchema().createRowBatch(batchSize);
             m_readers = columnReaders;
             internalNext();
@@ -175,8 +189,7 @@ public final class OrcTableStoreReader extends AbstractTableStoreReader {
          */
         @Override
         public DataRow next() {
-            OrcRow orcRow = new OrcRow(this, m_rowInBatch); // this is fragile as updates to the batch make it invalid
-            DataRow safeRow = new BlobSupportDataRow(orcRow.getKey(), orcRow);
+            final DataRow safeRow = copy(new OrcRow(this, m_rowInBatch));
             m_rowInBatch += 1;
             if (m_rowInBatch >= m_rowBatch.size) {
                 try {
@@ -186,6 +199,15 @@ public final class OrcTableStoreReader extends AbstractTableStoreReader {
                 }
             }
             return safeRow;
+        }
+
+        /**
+         * @param row
+         * @return
+         */
+        // whatever we do here could potentially improve runtime dramatically
+        private DataRow copy(final OrcRow row) {
+            return new DefaultRow(row.getKey(), row);
         }
 
         private void internalNext() throws IOException {
@@ -220,6 +242,10 @@ public final class OrcTableStoreReader extends AbstractTableStoreReader {
 
         private final int m_rowInBatch;
 
+        private int m_offset;
+
+        private OrcStringType m_rowKeyReader;
+
         /**
          * @param iterator
          * @param rowInBatch
@@ -227,25 +253,29 @@ public final class OrcTableStoreReader extends AbstractTableStoreReader {
         OrcRow(final OrcRowIterator iterator, final int rowInBatch) {
             m_iterator = iterator;
             m_rowInBatch = rowInBatch;
+            m_offset = (m_iterator.m_hasRowKey ? 1 : 0);
+
+            if (m_iterator.m_hasRowKey) {
+                m_rowKeyReader = (OrcStringType)m_iterator.m_readers[0];
+            }
         }
 
         @Override
         public RowKey getKey() {
             if (m_iterator.m_hasRowKey) {
-                String str = ((OrcStringType)m_iterator.m_readers[0])
-                    .readString((BytesColumnVector)m_iterator.m_rowBatch.cols[0], m_rowInBatch);
+                String str = m_rowKeyReader.readString((BytesColumnVector)m_iterator.m_rowBatch.cols[0], m_rowInBatch);
+                // TODO lazy
                 return new RowKey(str);
             } else {
                 return NO_KEY;
             }
         }
 
+        @SuppressWarnings("unchecked")
         @Override
         public DataCell getCell(final int index) {
-            int c = index + (m_iterator.m_hasRowKey ? 1 : 0);
-            @SuppressWarnings("unchecked")
-            OrcType<ColumnVector> orcType = (OrcType<ColumnVector>)m_iterator.m_readers[c];
-            return orcType.readValue(m_iterator.m_rowBatch.cols[c], m_rowInBatch);
+            final int c = index + m_offset;
+            return m_iterator.m_readers[c].readValue(m_iterator.m_rowBatch.cols[c], m_rowInBatch);
         }
 
         @Override

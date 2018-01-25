@@ -96,6 +96,8 @@ public class OrcTableStoreWriter extends AbstractTableStoreWriter {
      * @param file
      * @param spec
      * @param isWriteRowKey
+     * @param batchSize
+     * @param stripeSize
      * @throws IOException
      * @throws IllegalArgumentException
      */
