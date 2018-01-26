@@ -63,6 +63,7 @@ import org.apache.orc.Reader;
 import org.apache.orc.RecordReader;
 import org.knime.core.data.DataCell;
 import org.knime.core.data.DataRow;
+import org.knime.core.data.IDataRepository;
 import org.knime.core.data.RowKey;
 import org.knime.core.data.container.BlobSupportDataRow;
 import org.knime.core.data.container.storage.AbstractTableStoreReader;
@@ -90,7 +91,8 @@ public final class OrcTableStoreReader extends AbstractTableStoreReader {
 
     private OrcType<?>[] m_columnReaders;
 
-    public OrcTableStoreReader(final File file, final boolean isReadRowKey) throws InvalidSettingsException {
+    public OrcTableStoreReader(final File file, final boolean isReadRowKey, final IDataRepository dataRepository) {
+        super(dataRepository);
         m_file = file;
         m_isReadRowKey = isReadRowKey;
         // TODO make this configurable from outside?

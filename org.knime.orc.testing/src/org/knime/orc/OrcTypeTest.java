@@ -74,6 +74,7 @@ import org.knime.core.data.DataType;
 import org.knime.core.data.RowKey;
 import org.knime.core.data.def.DefaultRow;
 import org.knime.core.node.NodeSettings;
+import org.knime.core.node.workflow.WorkflowDataRepository;
 import org.knime.orc.OrcTableStoreReader.OrcRowIterator;
 
 /**
@@ -115,7 +116,8 @@ public final class OrcTypeTest {
         NodeSettings settings = new NodeSettings("temp");
         writer.writeMetaInfoAfterWrite(settings);
 
-        OrcTableStoreReader reader = new OrcTableStoreReader(tempFile, false);
+        OrcTableStoreReader reader = new OrcTableStoreReader(
+            tempFile, false, WorkflowDataRepository.OLD_WORKFLOWS_INSTANCE);
         reader.loadMetaInfoBeforeRead(settings);
 
         OrcRowIterator rowIterator = reader.iterator();
@@ -180,7 +182,8 @@ public final class OrcTypeTest {
         Assert.assertThat("File length unexpected " + tempFile.getAbsolutePath(), FileUtils.sizeOf(tempFile),
             OrderingComparison.greaterThan(0L));
 
-        OrcTableStoreReader reader = new OrcTableStoreReader(tempFile, testHeader);
+        OrcTableStoreReader reader = new OrcTableStoreReader(tempFile, testHeader,
+            WorkflowDataRepository.OLD_WORKFLOWS_INSTANCE);
         reader.loadMetaInfoBeforeRead(settings);
 
         OrcRowIterator rowIterator = reader.iterator();

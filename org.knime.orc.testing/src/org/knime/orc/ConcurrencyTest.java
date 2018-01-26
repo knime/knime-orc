@@ -74,6 +74,7 @@ import org.knime.core.data.def.DefaultRow;
 import org.knime.core.data.def.IntCell;
 import org.knime.core.data.def.StringCell;
 import org.knime.core.node.NodeSettings;
+import org.knime.core.node.workflow.WorkflowDataRepository;
 import org.knime.orc.OrcTableStoreReader.OrcRowIterator;
 
 /**
@@ -125,7 +126,8 @@ public final class ConcurrencyTest {
                 Future<FileAndSettings> completeWriterFuture = runWriterCompletionService.take();
                 FileAndSettings fileAndWriterSettings = completeWriterFuture.get();
                 runReaderCompletionService.submit(() -> {
-                    OrcTableStoreReader readBuilder = new OrcTableStoreReader(fileAndWriterSettings.m_file, true);
+                    OrcTableStoreReader readBuilder = new OrcTableStoreReader(
+                        fileAndWriterSettings.m_file, true, WorkflowDataRepository.OLD_WORKFLOWS_INSTANCE);
                     readBuilder.loadMetaInfoBeforeRead(fileAndWriterSettings.m_settings);
 
                     OrcRowIterator rowIterator = readBuilder.iterator();

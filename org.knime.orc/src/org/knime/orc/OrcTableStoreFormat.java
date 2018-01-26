@@ -55,7 +55,7 @@ import java.util.Map;
 
 import org.knime.core.data.DataTableSpec;
 import org.knime.core.data.DataType;
-import org.knime.core.data.container.ContainerTable;
+import org.knime.core.data.IDataRepository;
 import org.knime.core.data.container.storage.AbstractTableStoreReader;
 import org.knime.core.data.container.storage.AbstractTableStoreWriter;
 import org.knime.core.data.container.storage.TableStoreFormat;
@@ -127,9 +127,9 @@ public final class OrcTableStoreFormat implements TableStoreFormat {
      */
     @Override
     public AbstractTableStoreReader createReader(final File binFile, final DataTableSpec spec,
-        final NodeSettingsRO settings, final Map<Integer, ContainerTable> tblRep, final int version,
+        final IDataRepository dataRepository, final NodeSettingsRO settings, final int version,
         final boolean isReadRowKey) throws IOException, InvalidSettingsException {
-        final OrcTableStoreReader reader = new OrcTableStoreReader(binFile, isReadRowKey);
+        final OrcTableStoreReader reader = new OrcTableStoreReader(binFile, isReadRowKey, dataRepository);
         reader.loadMetaInfoBeforeRead(settings);
         return reader;
     }
