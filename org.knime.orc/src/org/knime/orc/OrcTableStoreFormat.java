@@ -51,8 +51,12 @@ import java.io.File;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
+import org.apache.hadoop.hive.ql.exec.vector.ColumnVector;
+import org.knime.core.data.DataColumnSpec;
 import org.knime.core.data.DataTableSpec;
 import org.knime.core.data.DataType;
 import org.knime.core.data.container.ContainerTable;
@@ -61,33 +65,86 @@ import org.knime.core.data.container.storage.AbstractTableStoreWriter;
 import org.knime.core.data.container.storage.TableStoreFormat;
 import org.knime.core.node.InvalidSettingsException;
 import org.knime.core.node.NodeSettingsRO;
+import org.knime.orc.types.OrcBinaryTypeFactory;
+import org.knime.orc.types.OrcBooleanTypeFactory;
 import org.knime.orc.types.OrcDoubleTypeFactory;
 import org.knime.orc.types.OrcIntTypeFactory;
+import org.knime.orc.types.OrcListTypeFactory;
+import org.knime.orc.types.OrcListTypeFactory.OrcListType;
 import org.knime.orc.types.OrcLongTypeFactory;
 import org.knime.orc.types.OrcStringTypeFactory;
+import org.knime.orc.types.OrcTimestampTypeFactory;
 import org.knime.orc.types.OrcType;
 import org.knime.orc.types.OrcTypeFactory;
 
+/**
+ * Table Store Format for ORC.
+ *
+ * @author
+ */
 public final class OrcTableStoreFormat implements TableStoreFormat {
 
     // TODO we could add an extension point for this later.
-    private final static Map<DataType, OrcTypeFactory<?>> TYPE_FACTORIES = new HashMap<>();
+    private static final Map<DataType, OrcTypeFactory<?>> TYPE_FACTORIES = new HashMap<>();
 
     static {
         register(new OrcStringTypeFactory());
         register(new OrcDoubleTypeFactory());
         register(new OrcIntTypeFactory());
         register(new OrcLongTypeFactory());
+        register(new OrcBinaryTypeFactory());
+        register(new OrcBooleanTypeFactory());
+        register(new OrcBinaryTypeFactory());
+        register(new OrcTimestampTypeFactory());
     }
 
+    /**
+     * Registers a OrcTypeFactory.
+     *
+     * @param fac the factory to register
+     */
     public static synchronized <T extends OrcType<?>> void register(final OrcTypeFactory<T> fac) {
         TYPE_FACTORIES.putIfAbsent(fac.type(), fac);
     }
 
-    public final static <T extends OrcType<?>> T createOrcType(final DataType type) {
-        @SuppressWarnings("unchecked")
-        final T orcType = (T)TYPE_FACTORIES.get(type).create();
-        return orcType;
+    /**
+     * Creates a OrcType for the given {@link DataType}.
+     *
+     * @param type the data type
+     * @return The corresponding OrcType for the type
+     */
+    @SuppressWarnings("unchecked")
+    public static final <T extends OrcType<?>> T createOrcType(final DataType type) {
+        if (type.isCollectionType()) {
+            OrcListTypeFactory factory = new OrcListTypeFactory();
+
+            OrcTypeFactory<?> orcTypeFactory = TYPE_FACTORIES.get(type.getCollectionElementType());
+            if (orcTypeFactory == null) {
+                throw new OrcReadException(
+                    String.format("List of type %s not supported yet.", type.getCollectionElementType()));
+            }
+            OrcType<ColumnVector> subtype = (OrcType<ColumnVector>)orcTypeFactory.create();
+            final OrcListType orcType = factory.create(subtype);
+            return (T)orcType;
+        }
+        if (TYPE_FACTORIES.get(type) == null) {
+            throw new OrcWriteException(String.format("Type %s not supported yet", type.getName()));
+        }
+        return (T)TYPE_FACTORIES.get(type).create();
+    }
+
+    /**
+     * Returns an array of all unsupported types for a given table spec
+     *
+     * @param spec the table spec to check
+     * @return the array containing the unsupported types
+     */
+    public String[] getUnsupportedTypes(final DataTableSpec spec) {
+        List<String> unsupported = spec.stream().map(DataColumnSpec::getType).filter(t -> !t.isCollectionType())
+            .filter(t -> !TYPE_FACTORIES.containsKey(t)).map(DataType::getName).collect(Collectors.toList());
+        spec.stream().map(DataColumnSpec::getType).filter(t -> t.isCollectionType())
+        .filter(t -> !TYPE_FACTORIES.containsKey(t.getCollectionElementType())).map(DataType::getName).collect(Collectors.toList());
+        return unsupported.toArray(new String[unsupported.size()]);
     }
 
     @Override
@@ -103,7 +160,11 @@ public final class OrcTableStoreFormat implements TableStoreFormat {
     /** {@inheritDoc} */
     @Override
     public boolean accepts(final DataTableSpec spec) {
-        return spec.stream().map(c -> c.getType()).allMatch(t -> TYPE_FACTORIES.containsKey(t));
+        boolean listsSupported = spec.stream().map(DataColumnSpec::getType).filter(DataType::isCollectionType)
+            .allMatch(t -> TYPE_FACTORIES.containsKey(t.getCollectionElementType()));
+        boolean otherSupported = spec.stream().map(DataColumnSpec::getType).filter(t -> !t.isCollectionType())
+            .allMatch(t -> TYPE_FACTORIES.containsKey(t));
+        return listsSupported && otherSupported;
     }
 
     /** {@inheritDoc} */
@@ -118,7 +179,7 @@ public final class OrcTableStoreFormat implements TableStoreFormat {
      */
     @Override
     public AbstractTableStoreWriter createWriter(final OutputStream output, final DataTableSpec spec,
-        final boolean writeRowKey) throws IOException, UnsupportedOperationException {
+        final boolean writeRowKey) throws IOException {
         throw new UnsupportedOperationException("Writing to stream not supported");
     }
 

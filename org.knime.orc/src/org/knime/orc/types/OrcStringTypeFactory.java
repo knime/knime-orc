@@ -89,6 +89,7 @@ public class OrcStringTypeFactory implements OrcTypeFactory<OrcStringType> {
         @Override
         public void writeValueNonNull(final BytesColumnVector columnVector, final int rowInBatch, final DataCell cell) {
             byte[] b = ((StringValue)cell).getStringValue().getBytes(StandardCharsets.UTF_8);
+            columnVector.ensureSize(b.length, true);
             columnVector.setRef(rowInBatch, b, 0, b.length);
         }
 

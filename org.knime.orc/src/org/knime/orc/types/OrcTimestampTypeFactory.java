@@ -1,5 +1,6 @@
 /*
  * ------------------------------------------------------------------------
+ *
  *  Copyright by KNIME AG, Zurich, Switzerland
  *  Website: http://www.knime.com; Email: contact@knime.com
  *
@@ -40,75 +41,77 @@
  *  propagated with or for interoperation with KNIME.  The owner of a Node
  *  may freely choose the license terms applicable to such Node, including
  *  when such Node is propagated with or for interoperation with KNIME.
- * -------------------------------------------------------------------
+ * ---------------------------------------------------------------------
  *
  * History
- *   Mar 18, 2016 (wiswedel): created
+ *   02.05.2018 ("Mareike Hoeger, KNIME GmbH, Konstanz, Germany"): created
  */
 package org.knime.orc.types;
 
-import org.apache.hadoop.hive.ql.exec.vector.ColumnVector;
+import java.sql.Timestamp;
+
+import org.apache.hadoop.hive.ql.exec.vector.TimestampColumnVector;
 import org.apache.orc.TypeDescription;
 import org.knime.core.data.DataCell;
 import org.knime.core.data.DataType;
+import org.knime.core.data.time.localdatetime.LocalDateTimeCell;
+import org.knime.core.data.time.localdatetime.LocalDateTimeCellFactory;
+import org.knime.orc.types.OrcTimestampTypeFactory.OrcTimestampType;
 
 /**
- * Abstract implementation for the ORC type interface.
+ * Factory for the ORC Timstamp
  *
- * @author Bernd Wiswedel, KNIME AG, Zuerich, Switzerland
- * @param <C> The type of the handled ColumnVector
+ * @author Mareike Hoeger, KNIME GmbH, Konstanz, Germany
  */
-public abstract class AbstractOrcType<C extends ColumnVector> implements OrcType<C> {
-
-    private final TypeDescription m_typeDescription;
+public class OrcTimestampTypeFactory implements OrcTypeFactory<OrcTimestampType> {
 
     /**
-     * Creates an ORC type with the given type description.
-     * @param typeDescription the ORC type description
+     * {@inheritDoc}
      */
-    public AbstractOrcType(final TypeDescription typeDescription) {
-        m_typeDescription = typeDescription;
+    @Override
+    public OrcTimestampType create() {
+        return new OrcTimestampType();
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
-    public void writeValue(final C columnVector, final int rowInBatch, final DataCell cell) {
-        if (cell.isMissing()) {
-            columnVector.noNulls = false;
-            columnVector.isNull[rowInBatch] = true;
-        } else {
-            writeValueNonNull(columnVector, rowInBatch, cell);
+    public DataType type() {
+        return LocalDateTimeCellFactory.TYPE;
+    }
+
+    /**
+     * Type for ORC timestamp type.
+     *
+     * @author "Mareike Hoeger, KNIME GmbH, Konstanz, Germany"
+     */
+    public static class OrcTimestampType extends AbstractOrcType<TimestampColumnVector> {
+
+        /**
+         * Creates ORC timestamp type object.
+         */
+        public OrcTimestampType() {
+            super(TypeDescription.createTimestamp());
+        }
+
+        /**
+         * {@inheritDoc}
+         */
+        @Override
+        protected DataCell readValueNonNull(final TimestampColumnVector columnVector, final int rowInBatchCorrected) {
+            return LocalDateTimeCellFactory
+                .create(columnVector.asScratchTimestamp(rowInBatchCorrected).toLocalDateTime());
+        }
+
+        /**
+         * {@inheritDoc}
+         */
+        @Override
+        protected void writeValueNonNull(final TimestampColumnVector columnVector, final int rowInBatch,
+            final DataCell cell) {
+            Timestamp timestamp = Timestamp.valueOf(((LocalDateTimeCell)cell).getLocalDateTime());
+            columnVector.set(rowInBatch, timestamp);
         }
     }
-
-    @Override
-    public DataCell readValue(final C columnVector, final int rowInBatch) {
-        int rowInBatchCorrected = columnVector.isRepeating ? 0 : rowInBatch;
-        if (columnVector.noNulls || !columnVector.isNull[rowInBatchCorrected]) {
-            return readValueNonNull(columnVector, rowInBatchCorrected);
-        } else {
-            return DataType.getMissingCell();
-        }
-    }
-
-    /**
-     * Reads a row from the column vector into a {@link DataCell}.
-     * @param columnVector the column vector to read from
-     * @param rowInBatchCorrected the row to read
-     * @return DataCell the KNIME Data Cell containing the read data
-     */
-    protected abstract DataCell readValueNonNull(C columnVector, int rowInBatchCorrected);
-
-    /**
-     *  Writes the content of the {@link DataCell} into the column vector at the given row.
-     * @param columnVector the column vector to write into
-     * @param rowInBatch the row to write into
-     * @param cell the cell to write
-     */
-    protected abstract void writeValueNonNull(C columnVector, int rowInBatch, DataCell cell);
-
-    @Override
-    public final TypeDescription getTypeDescription() {
-        return m_typeDescription;
-    }
-
 }

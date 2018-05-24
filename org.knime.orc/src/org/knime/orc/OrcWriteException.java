@@ -1,5 +1,6 @@
 /*
  * ------------------------------------------------------------------------
+ *
  *  Copyright by KNIME AG, Zurich, Switzerland
  *  Website: http://www.knime.com; Email: contact@knime.com
  *
@@ -40,75 +41,49 @@
  *  propagated with or for interoperation with KNIME.  The owner of a Node
  *  may freely choose the license terms applicable to such Node, including
  *  when such Node is propagated with or for interoperation with KNIME.
- * -------------------------------------------------------------------
+ * ---------------------------------------------------------------------
  *
  * History
- *   Mar 18, 2016 (wiswedel): created
+ *   08.05.2018 ("Mareike Hoeger, KNIME GmbH, Konstanz, Germany"): created
  */
-package org.knime.orc.types;
-
-import org.apache.hadoop.hive.ql.exec.vector.ColumnVector;
-import org.apache.orc.TypeDescription;
-import org.knime.core.data.DataCell;
-import org.knime.core.data.DataType;
+package org.knime.orc;
 
 /**
- * Abstract implementation for the ORC type interface.
+ * Thrown for faults during the writing of an ORC file.
  *
- * @author Bernd Wiswedel, KNIME AG, Zuerich, Switzerland
- * @param <C> The type of the handled ColumnVector
+ * @author Mareike Hoeger, KNIME GmbH, Konstanz, Germany
  */
-public abstract class AbstractOrcType<C extends ColumnVector> implements OrcType<C> {
+public class OrcWriteException extends RuntimeException {
 
-    private final TypeDescription m_typeDescription;
+    private static final long serialVersionUID = 1L;
 
     /**
-     * Creates an ORC type with the given type description.
-     * @param typeDescription the ORC type description
+     * Constructs a new ORC write exception with the specified message and cause.
+     *
+     * @param message the message
+     * @param cause the cause
      */
-    public AbstractOrcType(final TypeDescription typeDescription) {
-        m_typeDescription = typeDescription;
-    }
-
-    @Override
-    public void writeValue(final C columnVector, final int rowInBatch, final DataCell cell) {
-        if (cell.isMissing()) {
-            columnVector.noNulls = false;
-            columnVector.isNull[rowInBatch] = true;
-        } else {
-            writeValueNonNull(columnVector, rowInBatch, cell);
-        }
-    }
-
-    @Override
-    public DataCell readValue(final C columnVector, final int rowInBatch) {
-        int rowInBatchCorrected = columnVector.isRepeating ? 0 : rowInBatch;
-        if (columnVector.noNulls || !columnVector.isNull[rowInBatchCorrected]) {
-            return readValueNonNull(columnVector, rowInBatchCorrected);
-        } else {
-            return DataType.getMissingCell();
-        }
+    public OrcWriteException(final String message, final Throwable cause) {
+        super(message, cause);
     }
 
     /**
-     * Reads a row from the column vector into a {@link DataCell}.
-     * @param columnVector the column vector to read from
-     * @param rowInBatchCorrected the row to read
-     * @return DataCell the KNIME Data Cell containing the read data
+     * Constructs a new ORC write exception with the specified message.
+     *
+     * @param message the message
      */
-    protected abstract DataCell readValueNonNull(C columnVector, int rowInBatchCorrected);
+    public OrcWriteException(final String message) {
+        super(message);
+    }
 
     /**
-     *  Writes the content of the {@link DataCell} into the column vector at the given row.
-     * @param columnVector the column vector to write into
-     * @param rowInBatch the row to write into
-     * @param cell the cell to write
+     * Constructs a new ORC write exception with the specified cause.
+     * @param cause the cause
      */
-    protected abstract void writeValueNonNull(C columnVector, int rowInBatch, DataCell cell);
-
-    @Override
-    public final TypeDescription getTypeDescription() {
-        return m_typeDescription;
+    public OrcWriteException(final Throwable cause) {
+        super(cause);
     }
+
+
 
 }
