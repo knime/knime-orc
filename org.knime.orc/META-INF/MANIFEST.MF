@@ -24,4 +24,5 @@ Require-Bundle: org.knime.core;bundle-version="[3.6.0,4.0.0)",
  org.apache.httpcomponents.httpclient;bundle-version="[4.5.3,5.0.0)",
  org.apache.commons.httpclient;bundle-version="[3.1.0,4.0.0)",
  org.knime.bigdata.commons;bundle-version="[3.6.0,4.0.0)",
+ org.knime.bigdata.filehandling;bundle-version="3.6.0",
  org.knime.cloud.aws;bundle-version="[3.6.0,4.0.0)"
