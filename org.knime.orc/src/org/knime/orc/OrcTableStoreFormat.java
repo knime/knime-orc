@@ -214,9 +214,7 @@ public final class OrcTableStoreFormat implements TableStoreFormat {
     public AbstractTableStoreReader createReader(final File binFile, final DataTableSpec spec,
         final NodeSettingsRO settings, final Map<Integer, ContainerTable> tblRep, final int version,
         final boolean isReadRowKey) throws IOException, InvalidSettingsException {
-        final OrcTableStoreReader reader = new OrcTableStoreReader(binFile, isReadRowKey);
-        reader.loadMetaInfoBeforeRead(settings);
-        return reader;
+        return new OrcTableStoreReader(binFile, isReadRowKey, settings, version);
     }
 
 }

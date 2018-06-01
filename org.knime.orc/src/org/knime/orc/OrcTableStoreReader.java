@@ -90,7 +90,9 @@ public final class OrcTableStoreReader extends AbstractTableStoreReader {
 
     private OrcType<?>[] m_columnReaders;
 
-    public OrcTableStoreReader(final File file, final boolean isReadRowKey) throws InvalidSettingsException {
+    public OrcTableStoreReader(final File file, final boolean isReadRowKey, final NodeSettingsRO settings,
+        final int version) throws IOException, InvalidSettingsException {
+        super(file, settings, version);
         m_file = file;
         m_isReadRowKey = isReadRowKey;
         // TODO make this configurable from outside?
@@ -111,13 +113,14 @@ public final class OrcTableStoreReader extends AbstractTableStoreReader {
         return new OrcRowIterator(reader, m_isReadRowKey, m_batchSize, m_columnReaders);
     }
 
-    // TODO could we make this part of the interface?
     /**
      * @param settings contain {@link AbstractOrcType}s used to write columns.
      * @throws InvalidSettingsException thrown in case something goes wrong during de-serialization, e.g. a new version
      *             of a writer has been used which hasn't been installed on the current system.
      */
-    public void loadMetaInfoBeforeRead(final NodeSettingsRO settings) throws InvalidSettingsException {
+    @Override
+    protected void readMetaFromFile(final NodeSettingsRO settings, final File fileStoreDir, final int version)
+            throws IOException, InvalidSettingsException {
         try {
             final List<OrcType<?>> types = new ArrayList<>();
             NodeSettingsRO columnSettings = settings.getNodeSettings("columns");
