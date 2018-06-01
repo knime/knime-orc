@@ -119,8 +119,8 @@ public final class OrcTableStoreReader extends AbstractTableStoreReader {
      *             of a writer has been used which hasn't been installed on the current system.
      */
     @Override
-    protected void readMetaFromFile(final NodeSettingsRO settings, final File fileStoreDir, final int version)
-            throws IOException, InvalidSettingsException {
+    protected void readMetaFromFile(final NodeSettingsRO settings, final int version)
+        throws IOException, InvalidSettingsException {
         try {
             final List<OrcType<?>> types = new ArrayList<>();
             NodeSettingsRO columnSettings = settings.getNodeSettings("columns");
