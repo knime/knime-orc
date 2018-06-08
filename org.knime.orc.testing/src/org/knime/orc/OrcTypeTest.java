@@ -115,8 +115,8 @@ public final class OrcTypeTest {
         NodeSettings settings = new NodeSettings("temp");
         writer.writeMetaInfoAfterWrite(settings);
 
-        OrcTableStoreReader reader = new OrcTableStoreReader(tempFile, false);
-        reader.loadMetaInfoBeforeRead(settings);
+        OrcTableStoreReader reader = new OrcTableStoreReader(tempFile, false, settings, 10);
+        reader.readMetaFromFile(settings, 10);
 
         OrcRowIterator rowIterator = reader.iterator();
         Assert.assertThat("Iterator has rows", rowIterator.hasNext(), is(true));
@@ -180,8 +180,8 @@ public final class OrcTypeTest {
         Assert.assertThat("File length unexpected " + tempFile.getAbsolutePath(), FileUtils.sizeOf(tempFile),
             OrderingComparison.greaterThan(0L));
 
-        OrcTableStoreReader reader = new OrcTableStoreReader(tempFile, testHeader);
-        reader.loadMetaInfoBeforeRead(settings);
+        OrcTableStoreReader reader = new OrcTableStoreReader(tempFile, testHeader, settings, 10);
+        reader.readMetaFromFile(settings, 10);
 
         OrcRowIterator rowIterator = reader.iterator();
         for (long i = 0; i < rowCount; i++) {
