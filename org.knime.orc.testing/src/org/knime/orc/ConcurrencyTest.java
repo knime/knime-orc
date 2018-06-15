@@ -128,7 +128,7 @@ public final class ConcurrencyTest {
                 runReaderCompletionService.submit(() -> {
                     OrcTableStoreReader readBuilder = new OrcTableStoreReader(fileAndWriterSettings.m_file, true,
                         fileAndWriterSettings.m_settings, Buffer.IVERSION);
-                    readBuilder.readMetaFromFile(fileAndWriterSettings.m_settings, 10);
+                    readBuilder.readMetaFromFile(fileAndWriterSettings.m_settings, Buffer.IVERSION);
 
                     OrcRowIterator rowIterator = readBuilder.iterator();
                     for (int j = 0; j < rowsToWrite.length; j++) {
