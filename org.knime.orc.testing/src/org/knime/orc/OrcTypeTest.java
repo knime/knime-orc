@@ -72,6 +72,7 @@ import org.knime.core.data.DataRow;
 import org.knime.core.data.DataTableSpec;
 import org.knime.core.data.DataType;
 import org.knime.core.data.RowKey;
+import org.knime.core.data.container.Buffer;
 import org.knime.core.data.def.DefaultRow;
 import org.knime.core.node.NodeSettings;
 import org.knime.orc.OrcTableStoreReader.OrcRowIterator;
@@ -115,7 +116,7 @@ public final class OrcTypeTest {
         NodeSettings settings = new NodeSettings("temp");
         writer.writeMetaInfoAfterWrite(settings);
 
-        OrcTableStoreReader reader = new OrcTableStoreReader(tempFile, false, settings, 10);
+        OrcTableStoreReader reader = new OrcTableStoreReader(tempFile, false, settings, Buffer.IVERSION);
         reader.readMetaFromFile(settings, 10);
 
         OrcRowIterator rowIterator = reader.iterator();
@@ -180,7 +181,7 @@ public final class OrcTypeTest {
         Assert.assertThat("File length unexpected " + tempFile.getAbsolutePath(), FileUtils.sizeOf(tempFile),
             OrderingComparison.greaterThan(0L));
 
-        OrcTableStoreReader reader = new OrcTableStoreReader(tempFile, testHeader, settings, 10);
+        OrcTableStoreReader reader = new OrcTableStoreReader(tempFile, testHeader, settings, Buffer.IVERSION);
         reader.readMetaFromFile(settings, 10);
 
         OrcRowIterator rowIterator = reader.iterator();

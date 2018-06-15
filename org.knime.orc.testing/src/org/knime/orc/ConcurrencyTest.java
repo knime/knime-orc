@@ -70,6 +70,7 @@ import org.knime.core.data.DataRow;
 import org.knime.core.data.DataTableSpec;
 import org.knime.core.data.DataType;
 import org.knime.core.data.RowKey;
+import org.knime.core.data.container.Buffer;
 import org.knime.core.data.def.DefaultRow;
 import org.knime.core.data.def.IntCell;
 import org.knime.core.data.def.StringCell;
@@ -125,7 +126,8 @@ public final class ConcurrencyTest {
                 Future<FileAndSettings> completeWriterFuture = runWriterCompletionService.take();
                 FileAndSettings fileAndWriterSettings = completeWriterFuture.get();
                 runReaderCompletionService.submit(() -> {
-                    OrcTableStoreReader readBuilder = new OrcTableStoreReader(fileAndWriterSettings.m_file, true, fileAndWriterSettings.m_settings, 10);
+                    OrcTableStoreReader readBuilder = new OrcTableStoreReader(fileAndWriterSettings.m_file, true,
+                        fileAndWriterSettings.m_settings, Buffer.IVERSION);
                     readBuilder.readMetaFromFile(fileAndWriterSettings.m_settings, 10);
 
                     OrcRowIterator rowIterator = readBuilder.iterator();
