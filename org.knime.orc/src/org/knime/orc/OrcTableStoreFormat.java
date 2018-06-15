@@ -50,6 +50,7 @@ package org.knime.orc;
 import java.io.File;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -98,6 +99,17 @@ public final class OrcTableStoreFormat implements TableStoreFormat {
         register(new OrcTimestampTypeFactory());
     }
 
+    /** Different versions of how this extensions writes ORC files
+     * (e.g. supported missing value causes, blob support, etc.).
+     */
+    private enum OrcTableStoreFormatVersion {
+        /** Bare minimum, only primitive types. */
+        ORC_2018_06_15;
+    }
+
+    /** The current (latest)version that gets written. */
+    private static final OrcTableStoreFormatVersion CURRENT_VERSION = OrcTableStoreFormatVersion.ORC_2018_06_15;
+
     /**
      * Registers a OrcTypeFactory.
      *
@@ -131,6 +143,18 @@ public final class OrcTableStoreFormat implements TableStoreFormat {
             throw new OrcWriteException(String.format("Type %s not supported yet", type.getName()));
         }
         return (T)TYPE_FACTORIES.get(type).create();
+    }
+
+    @Override
+    public String getVersion() {
+        return CURRENT_VERSION.name();
+    }
+
+    @Override
+    public boolean validateVersion(final String versionString) {
+        return Arrays.stream(OrcTableStoreFormatVersion.values())//
+                .map(OrcTableStoreFormatVersion::name)//
+                .anyMatch(s -> s.equals(versionString));
     }
 
     /**
