@@ -7,7 +7,7 @@ Bundle-ClassPath: knime-orc.jar
 Bundle-Vendor: KNIME AG
 Export-Package: org.knime.orc,
   org.knime.orc.types
-Require-Bundle: org.knime.core;bundle-version="[3.6.0,4.0.0)",
+Require-Bundle: org.knime.core;bundle-version="[3.7.0,4.0.0)",
   com.google.protobuf;bundle-version="[2.5.0,3.0.0)",
   org.apache.commons.lang;bundle-version="[2.6.0,3.0.0)",
   org.apache.orc.core;bundle-version="[1.4.1,2.0.0)",
@@ -22,7 +22,7 @@ Require-Bundle: org.knime.core;bundle-version="[3.6.0,4.0.0)",
   org.apache.httpcomponents.httpclient;bundle-version="[4.5.3,5.0.0)",
   org.apache.commons.httpclient;bundle-version="[3.1.0,4.0.0)",
   org.knime.bigdata.commons;bundle-version="[3.6.0,4.0.0)",
-  org.knime.bigdata.filehandling;bundle-version="3.6.0",
+  org.knime.bigdata.filehandling;bundle-version="[3.6.0,4.0.0)",
   org.knime.cloud.aws;bundle-version="[3.6.0,4.0.0)"
 Bundle-RequiredExecutionEnvironment: JavaSE-1.8
 Bundle-ActivationPolicy: lazy

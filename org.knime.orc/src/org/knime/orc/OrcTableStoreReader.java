@@ -63,6 +63,7 @@ import org.apache.orc.Reader;
 import org.apache.orc.RecordReader;
 import org.knime.core.data.DataCell;
 import org.knime.core.data.DataRow;
+import org.knime.core.data.DataTableSpec;
 import org.knime.core.data.RowKey;
 import org.knime.core.data.container.BlobSupportDataRow;
 import org.knime.core.data.container.storage.AbstractTableStoreReader;
@@ -90,9 +91,9 @@ public final class OrcTableStoreReader extends AbstractTableStoreReader {
 
     private OrcType<?>[] m_columnReaders;
 
-    public OrcTableStoreReader(final File file, final boolean isReadRowKey, final NodeSettingsRO settings,
-        final int version) throws IOException, InvalidSettingsException {
-        super(file, settings, version);
+    public OrcTableStoreReader(final File file, final DataTableSpec spec, final boolean isReadRowKey,
+        final NodeSettingsRO settings, final int version) throws IOException, InvalidSettingsException {
+        super(file, spec, settings, version);
         m_file = file;
         m_isReadRowKey = isReadRowKey;
         // TODO make this configurable from outside?
@@ -101,16 +102,25 @@ public final class OrcTableStoreReader extends AbstractTableStoreReader {
 
     /** {@inheritDoc} */
     @Override
-    public OrcRowIterator iterator() throws IOException {
-        final Reader reader =
-            OrcFile.createReader(new Path(m_file.getAbsolutePath()), OrcFile.readerOptions(new Configuration()));
+    public OrcRowIterator iterator() {
+        try {
+            final Reader reader =
 
-        if (m_columnReaders == null) {
-            // TODO beautify exception message and add logging
-            throw new IOException(
-                "No information for type deserialization loaded. Most likely an implementation error.");
+                OrcFile.createReader(new Path(m_file.getAbsolutePath()), OrcFile.readerOptions(new Configuration()));
+
+            if (m_columnReaders == null) {
+                // TODO beautify exception message and add logging
+                throw new IOException(
+                    "No information for type deserialization loaded. Most likely an implementation error.");
+            }
+            return new OrcRowIterator(reader, m_isReadRowKey, m_batchSize, m_columnReaders);
+        } catch (IOException ioe) {
+            StringBuilder b = new StringBuilder("Cannot read file \"");
+            b.append(m_file != null ? m_file.getName() : "<unknown>");
+            b.append("\"");
+            checkAndReportOpenFiles(ioe);
+            throw new RuntimeException(b.toString(), ioe);
         }
-        return new OrcRowIterator(reader, m_isReadRowKey, m_batchSize, m_columnReaders);
     }
 
     /**

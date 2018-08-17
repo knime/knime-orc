@@ -57,6 +57,7 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 import org.apache.hadoop.hive.ql.exec.vector.ColumnVector;
+import org.knime.bigdata.filehandling.util.HadoopWinutilsInitializer;
 import org.knime.core.data.DataColumnSpec;
 import org.knime.core.data.DataTableSpec;
 import org.knime.core.data.DataType;
@@ -97,6 +98,22 @@ public final class OrcTableStoreFormat implements TableStoreFormat {
         register(new OrcBooleanTypeFactory());
         register(new OrcBinaryTypeFactory());
         register(new OrcTimestampTypeFactory());
+    }
+
+    static {
+        if (System.getProperty("os.name").startsWith("Windows")) {
+            try {
+                /*
+                 * ORC makes use of Hadoop libraries. These libraries require the HADOOP_HOME system variable
+                 * to be set and the executable winutils.exe present in the HADOOP_HOME directory. This is ensured here.
+                 */
+                HadoopWinutilsInitializer.ensureInitialized();
+            } catch (IOException e) {
+                throw new RuntimeException(
+                    "Path to HADOOP_HOME cannot be determined. ORC column store might not have access to winutils.exe.",
+                    e);
+            }
+        }
     }
 
     /** Different versions of how this extensions writes ORC files
@@ -214,7 +231,7 @@ public final class OrcTableStoreFormat implements TableStoreFormat {
     public AbstractTableStoreReader createReader(final File binFile, final DataTableSpec spec,
         final NodeSettingsRO settings, final Map<Integer, ContainerTable> tblRep, final int version,
         final boolean isReadRowKey) throws IOException, InvalidSettingsException {
-        return new OrcTableStoreReader(binFile, isReadRowKey, settings, version);
+        return new OrcTableStoreReader(binFile, spec, isReadRowKey, settings, version);
     }
 
 }

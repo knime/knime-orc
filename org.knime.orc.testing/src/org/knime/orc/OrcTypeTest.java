@@ -116,7 +116,7 @@ public final class OrcTypeTest {
         NodeSettings settings = new NodeSettings("temp");
         writer.writeMetaInfoAfterWrite(settings);
 
-        OrcTableStoreReader reader = new OrcTableStoreReader(tempFile, false, settings, Buffer.IVERSION);
+        OrcTableStoreReader reader = new OrcTableStoreReader(tempFile, spec, false, settings, Buffer.IVERSION);
         reader.readMetaFromFile(settings, Buffer.IVERSION);
 
         OrcRowIterator rowIterator = reader.iterator();
@@ -167,7 +167,10 @@ public final class OrcTypeTest {
 
     public void writeTestImplementation(final File tempFile, final Function<Long, DataCell> valueFunction,
         final boolean testHeader) throws Exception {
-        OrcTableStoreWriter orcWriter = prepOrcWriter(tempFile, testHeader);
+        // must not exist
+        DataTableSpec spec = new DataTableSpec(new DataColumnSpecCreator(m_orcKNIMETestType.getClass().getSimpleName(),
+            m_orcKNIMETestType.getKNIMEColumnType()).createSpec());
+        OrcTableStoreWriter orcWriter = prepOrcWriter(tempFile, spec, testHeader);
         final int rowCount = 5000;
         for (long i = 0; i < rowCount; i++) {
             DataCell singleCell = valueFunction.apply(i);
@@ -181,7 +184,7 @@ public final class OrcTypeTest {
         Assert.assertThat("File length unexpected " + tempFile.getAbsolutePath(), FileUtils.sizeOf(tempFile),
             OrderingComparison.greaterThan(0L));
 
-        OrcTableStoreReader reader = new OrcTableStoreReader(tempFile, testHeader, settings, Buffer.IVERSION);
+        OrcTableStoreReader reader = new OrcTableStoreReader(tempFile, spec, testHeader, settings, Buffer.IVERSION);
         reader.readMetaFromFile(settings, Buffer.IVERSION);
 
         OrcRowIterator rowIterator = reader.iterator();
@@ -209,11 +212,8 @@ public final class OrcTypeTest {
      * @throws IOException
      * @throws IllegalArgumentException
      */
-    private OrcTableStoreWriter prepOrcWriter(final File file, final boolean hasKey)
+    private OrcTableStoreWriter prepOrcWriter(final File file, final DataTableSpec spec, final boolean hasKey)
         throws IllegalArgumentException, IOException {
-        // must not exist
-        DataTableSpec spec = new DataTableSpec(new DataColumnSpecCreator(m_orcKNIMETestType.getClass().getSimpleName(),
-            m_orcKNIMETestType.getKNIMEColumnType()).createSpec());
         // batchSize  to force some further processing
         // stripeSize default is (was?) 64MB -- now it's 64kB to force multiple stripes
         OrcTableStoreWriter builder = new OrcTableStoreWriter(file, spec, hasKey, 256, 64 * 1024L);

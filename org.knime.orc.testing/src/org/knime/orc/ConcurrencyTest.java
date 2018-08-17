@@ -126,7 +126,7 @@ public final class ConcurrencyTest {
                 Future<FileAndSettings> completeWriterFuture = runWriterCompletionService.take();
                 FileAndSettings fileAndWriterSettings = completeWriterFuture.get();
                 runReaderCompletionService.submit(() -> {
-                    OrcTableStoreReader readBuilder = new OrcTableStoreReader(fileAndWriterSettings.m_file, true,
+                    OrcTableStoreReader readBuilder = new OrcTableStoreReader(fileAndWriterSettings.m_file, spec, true,
                         fileAndWriterSettings.m_settings, Buffer.IVERSION);
                     readBuilder.readMetaFromFile(fileAndWriterSettings.m_settings, Buffer.IVERSION);
 
