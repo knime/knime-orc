@@ -117,7 +117,6 @@ public final class OrcTypeTest {
         writer.writeMetaInfoAfterWrite(settings);
 
         OrcTableStoreReader reader = new OrcTableStoreReader(tempFile, spec, false, settings, Buffer.IVERSION);
-        reader.readMetaFromFile(settings, Buffer.IVERSION);
 
         OrcRowIterator rowIterator = reader.iterator();
         Assert.assertThat("Iterator has rows", rowIterator.hasNext(), is(true));
@@ -185,7 +184,6 @@ public final class OrcTypeTest {
             OrderingComparison.greaterThan(0L));
 
         OrcTableStoreReader reader = new OrcTableStoreReader(tempFile, spec, testHeader, settings, Buffer.IVERSION);
-        reader.readMetaFromFile(settings, Buffer.IVERSION);
 
         OrcRowIterator rowIterator = reader.iterator();
         for (long i = 0; i < rowCount; i++) {

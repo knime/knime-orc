@@ -181,6 +181,7 @@ public class OrcTableStoreWriter extends AbstractTableStoreWriter {
     /** {@inheritDoc} */
     @Override
     public void writeMetaInfoAfterWrite(final NodeSettingsWO settings) {
+        super.writeMetaInfoAfterWrite(settings);
         NodeSettingsWO columnsSettings = settings.addNodeSettings("columns");
         for (Pair<String, OrcType<?>> entry : m_fields) {
             // Remember the type which has been used to write this thingy..

@@ -70,7 +70,6 @@ import org.knime.core.data.container.storage.AbstractTableStoreReader;
 import org.knime.core.data.def.DefaultCellIterator;
 import org.knime.core.node.InvalidSettingsException;
 import org.knime.core.node.NodeSettingsRO;
-import org.knime.orc.types.AbstractOrcType;
 import org.knime.orc.types.OrcStringTypeFactory.OrcStringType;
 import org.knime.orc.types.OrcType;
 
@@ -98,6 +97,21 @@ public final class OrcTableStoreReader extends AbstractTableStoreReader {
         m_isReadRowKey = isReadRowKey;
         // TODO make this configurable from outside?
         m_batchSize = VectorizedRowBatch.DEFAULT_SIZE;
+
+        try {
+            final List<OrcType<?>> types = new ArrayList<>();
+            NodeSettingsRO columnSettings = settings.getNodeSettings("columns");
+            for (String typeName : columnSettings) {
+                types.add((OrcType<?>)Class.forName((columnSettings.getNodeSettings(typeName).getString("type")))
+                    .newInstance());
+            }
+            m_columnReaders = types.toArray(new OrcType[types.size()]);
+        } catch (ClassNotFoundException ex1) {
+            // Forward compatibility.
+            throw new InvalidSettingsException("Couldn't load class. Missing newer ORC TableStore reader?", ex1);
+        } catch (InstantiationException | IllegalAccessException | InvalidSettingsException ex2) {
+            throw new InvalidSettingsException("Problems during loading settings for ORC TableStore Reader.", ex2);
+        }
     }
 
     /** {@inheritDoc} */
@@ -120,30 +134,6 @@ public final class OrcTableStoreReader extends AbstractTableStoreReader {
             b.append("\"");
             checkAndReportOpenFiles(ioe);
             throw new RuntimeException(b.toString(), ioe);
-        }
-    }
-
-    /**
-     * @param settings contain {@link AbstractOrcType}s used to write columns.
-     * @throws InvalidSettingsException thrown in case something goes wrong during de-serialization, e.g. a new version
-     *             of a writer has been used which hasn't been installed on the current system.
-     */
-    @Override
-    protected void readMetaFromFile(final NodeSettingsRO settings, final int version)
-        throws IOException, InvalidSettingsException {
-        try {
-            final List<OrcType<?>> types = new ArrayList<>();
-            NodeSettingsRO columnSettings = settings.getNodeSettings("columns");
-            for (String typeName : columnSettings) {
-                types.add((OrcType<?>)Class.forName((columnSettings.getNodeSettings(typeName).getString("type")))
-                    .newInstance());
-            }
-            m_columnReaders = types.toArray(new OrcType[types.size()]);
-        } catch (ClassNotFoundException ex1) {
-            // Forward compatibility.
-            throw new InvalidSettingsException("Couldn't load class. Missing newer ORC TableStore reader?", ex1);
-        } catch (InstantiationException | IllegalAccessException | InvalidSettingsException ex2) {
-            throw new InvalidSettingsException("Problems during loading settings for ORC TableStore Reader.", ex2);
         }
     }
 
