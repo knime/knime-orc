@@ -1,20 +1,102 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
 
-  <!-- WHY IS THIS FILE HERE?
-  This pom file is necessary in order to build the referenced parent update site using Maven Tycho.
-  Please do not delete without consulting the person responsible for the parent update site because
-  it may break the build.
-  --> 
+    <modelVersion>4.0.0</modelVersion>
 
-	<modelVersion>4.0.0</modelVersion>
-  <parent>
-    <groupId>org.knime.bigdata</groupId>
-    <artifactId>bigdata-parent</artifactId>
-    <version>4.2.0-SNAPSHOT</version>
-    <relativePath>../knime-bigdata/pom.xml</relativePath>
-  </parent>
+    <parent>
+        <groupId>org.knime.maven</groupId>
+        <artifactId>ap.parent</artifactId>
+        <version>1.0.0</version>
+    </parent>
 
-  <artifactId>org.knime.knime-orc</artifactId>
-  <packaging>pom</packaging>
+    <groupId>org.knime</groupId>
+    <artifactId>knime-orc</artifactId>
+    <version>${revision}${changelist}</version>
+    <packaging>pom</packaging>
+
+    <properties>
+        <revision>4.2.0</revision>
+        <changelist>-SNAPSHOT</changelist>
+        <feature-branch-extension.branchListProperty>git.branch</feature-branch-extension.branchListProperty>
+        <feature-branch-extension.appendArtifactoryProperties>false</feature-branch-extension.appendArtifactoryProperties>
+    </properties>
+
+    <modules>
+        <module>org.knime.orc</module>
+        <module>org.knime.orc.tests</module>
+        <module>org.knime.features.orc</module>
+        <module>org.knime.update.orc</module>
+    </modules>
+
+    <!-- List all repositories required for compilation here. The variables are defined in knime-maven-parent/pom.xml. -->
+    <repositories>
+        <repository>
+            <id>p2-knime-bigdata-externals</id>
+            <layout>p2</layout>
+            <url>${knime.bigdata.externals.p2}</url>
+        </repository>
+        <repository>
+            <id>p2-knime-bigdata</id>
+            <layout>p2</layout>
+            <url>${knime.bigdata.p2}</url>
+        </repository>
+        <repository>
+            <id>p2-knime-expressions</id>
+            <layout>p2</layout>
+            <url>${knime.expressions.p2}</url>
+        </repository>
+        <repository>
+            <id>p2-knime-kerberos</id>
+            <layout>p2</layout>
+            <url>${knime.kerberos.p2}</url>
+        </repository>
+       <repository>
+           <id>p2-knime-workbench</id>
+           <layout>p2</layout>
+           <url>${knime.workbench.p2}</url>
+       </repository> 
+       <repository>
+           <id>p2-knime-js-core</id>
+           <layout>p2</layout>
+           <url>${knime.js.core.p2}</url>
+       </repository>
+       <repository>
+           <id>p2-knime-svg</id>
+           <layout>p2</layout>
+           <url>${knime.svg.p2}</url>
+       </repository>
+        <repository>
+            <id>p2-knime-core</id>
+            <layout>p2</layout>
+            <url>${knime.core.p2}</url>
+        </repository>
+        <repository>
+            <id>p2-knime-shared</id>
+            <layout>p2</layout>
+            <url>${knime.shared.p2}</url>
+        </repository>
+        <repository>
+            <id>p2-knime-tp</id>
+            <layout>p2</layout>
+            <url>${knime.tp.p2}</url>
+        </repository>
+        <repository>
+            <id>p2-knime-filehandling</id>
+            <layout>p2</layout>
+            <url>${knime.filehandling.p2}</url>
+        </repository>
+        <repository>
+            <id>p2-knime-base</id>
+            <layout>p2</layout>
+            <url>${knime.base.p2}</url>
+        </repository>
+        <repository>
+            <id>p2-knime-cloud</id>
+            <layout>p2</layout>
+            <url>${knime.cloud.p2}</url>
+        </repository>
+    </repositories>
+
 </project>

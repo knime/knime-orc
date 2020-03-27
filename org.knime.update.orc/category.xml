@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<site>
+   <feature id="org.knime.features.orc" version="0.0.0">
+       <category name="knime-orc" />
+   </feature>
+   <feature id="org.knime.features.orc.source" version="0.0.0">
+       <category name="knime-orc" />
+   </feature>
+
+   <category-def name="knime-orc" label="Build artifacts from knime-orc">
+       <description>Build artifacts from knime-orc</description>
+   </category-def>
+</site>

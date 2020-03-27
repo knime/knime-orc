@@ -1,7 +1,7 @@
 Manifest-Version: 1.0
 Bundle-ManifestVersion: 2
 Bundle-Name: Unit-Tests for org.knime.orc
-Bundle-SymbolicName: org.knime.orc.testing;singleton:=true
+Bundle-SymbolicName: org.knime.orc.tests;singleton:=true
 Bundle-Version: 4.2.0.qualifier
 Bundle-Vendor: KNIME AG, Zurich, Switzerland
 Fragment-Host: org.knime.orc;bundle-version="3.5.0"
