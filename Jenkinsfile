@@ -7,6 +7,7 @@ properties([
     pipelineTriggers([
         upstream('knime-bigdata/' + env.BRANCH_NAME.replaceAll('/', '%2F')),
     ]),
+    parameters(workflowTests.getConfigurationsAsParameters()),
     buildDiscarder(logRotator(numToKeepStr: '5')),
     disableConcurrentBuilds()
 ])
@@ -14,18 +15,18 @@ properties([
 try {
     knimetools.defaultTychoBuild('org.knime.update.orc')
 
-    // workflowTests.runTests(
-    //     dependencies: [
-    //         repositories: ['knime-orc'],
-    //     ],
-    //     // this is optional and defaults to false
-    //     withAssertions: true,
-    // )
+    workflowTests.runTests(
+        dependencies: [
+            repositories: ['knime-orc', 'knime-bigdata-externals', 'knime-cloud',
+                'knime-python', 'knime-bigdata', 'knime-filehandling', 'knime-streaming',
+                'knime-kerberos', 'knime-textprocessing', 'knime-dl4j', 'knime-database',
+                'knime-pmml-translation', 'knime-ensembles', 'knime-distance'],
+        ],
+    )
 
     stage('Sonarqube analysis') {
         env.lastStage = env.STAGE_NAME
-		// TODO: remove empty list once workflow tests are enabled
-        workflowTests.runSonar([])
+        workflowTests.runSonar()
     }
 } catch (ex) {
     currentBuild.result = 'FAILURE'
