@@ -2,4 +2,5 @@
 **/target/
 */build/
 **/.flattened-pom.xml
-*/knime-orc.jar
+*/*.jar
+**/CHANGELOG.md
