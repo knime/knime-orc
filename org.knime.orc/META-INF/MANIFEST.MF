@@ -7,7 +7,7 @@ Bundle-ClassPath: knime-orc.jar
 Bundle-Vendor: KNIME AG
 Export-Package: org.knime.orc,
   org.knime.orc.types
-Require-Bundle: org.knime.core;bundle-version="[4.0.0,5.0.0)",
+Require-Bundle: org.knime.core;bundle-version="[4.7.0,5.0.0)",
  com.google.protobuf;bundle-version="[2.5.0,3.0.0)",
  org.apache.commons.lang;bundle-version="[2.6.0,3.0.0)",
  org.apache.orc.core;bundle-version="[1.4.1,2.0.0)",
