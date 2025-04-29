@@ -36,7 +36,7 @@
                 <configuration>
                     <argLine>
                         ${failsafeArgLine}
-                        --add-opens=java.base/java.nio=ALL-UNNAMED
+                        ${knime.tycho.test.configuration}
                     </argLine>
                 </configuration>
             </plugin>
