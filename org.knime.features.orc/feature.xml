@@ -732,7 +732,7 @@ propagated with or for interoperation with KNIME.
    </license>
 
    <requires>
-      <import feature="org.knime.features.bigdata.commons" version="5.9.0"/>
+      <import feature="org.knime.features.bigdata.commons" version="5.10.0"/>
       <import feature="org.knime.features.cloud.core.deprecated"/>
    </requires>
    
