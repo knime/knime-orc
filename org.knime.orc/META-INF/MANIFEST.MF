@@ -16,7 +16,7 @@ Require-Bundle: org.knime.core;bundle-version="[5.10.0,6.0.0)",
  org.knime.time;bundle-version="[5.10.0,6.0.0)",
  org.apache.httpcomponents.httpclient;bundle-version="[4.5.3,5.0.0)",
  org.apache.commons.httpclient;bundle-version="[3.1.0,4.0.0)",
- org.knime.bigdata.commons;bundle-version="[5.9.0,6.0.0)",
+ org.knime.bigdata.commons;bundle-version="[5.10.0,6.0.0)",
  org.knime.bigdata.filehandling;bundle-version="[5.9.0,6.0.0)"
 Bundle-RequiredExecutionEnvironment: JavaSE-17
 Bundle-ActivationPolicy: lazy
